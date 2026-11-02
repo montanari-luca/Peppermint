@@ -1,6 +1,6 @@
 --- a/zen/spaces/ZenGradientGenerator.mjs
 +++ b/zen/spaces/ZenGradientGenerator.mjs
-@@ -66,6 +66,27 @@
+@@ -204,6 +204,27 @@
  });
  
  const EXPLICIT_LIGHTNESS_TYPE = "explicit-lightness";
@@ -28,7 +28,7 @@
  const EXPLICIT_BLACKWHITE_TYPE = "explicit-black-white";
  
  /**
-@@ -87,6 +108,7 @@
+@@ -227,6 +248,7 @@
    );
  
    #linePath = `M 51.373 27.395 L 367.037 27.395`;
@@ -36,7 +36,7 @@
    #sinePath = `M 51.373 27.395 C 60.14 -8.503 68.906 -8.503 77.671 27.395 C 86.438 63.293 95.205 63.293 103.971 27.395 C 112.738 -8.503 121.504 -8.503 130.271 27.395 C 139.037 63.293 147.803 63.293 156.57 27.395 C 165.335 -8.503 174.101 -8.503 182.868 27.395 C 191.634 63.293 200.4 63.293 209.167 27.395 C 217.933 -8.503 226.7 -8.503 235.467 27.395 C 244.233 63.293 252.999 63.293 261.765 27.395 C 270.531 -8.503 279.297 -8.503 288.064 27.395 C 296.83 63.293 305.596 63.293 314.363 27.395 C 323.13 -8.503 331.896 -8.503 340.662 27.395 M 314.438 27.395 C 323.204 -8.503 331.97 -8.503 340.737 27.395 C 349.503 63.293 358.27 63.293 367.037 27.395`;
  
    #sinePoints = parseSinePath(this.#sinePath);
-@@ -706,7 +728,7 @@
+@@ -909,7 +931,7 @@
    }
  
    handlePanelCommand(event) {
@@ -45,7 +45,7 @@
      if (!target) {
        return;
      }
-@@ -714,9 +736,23 @@
+@@ -917,9 +939,23 @@
        case "PanelUI-zen-gradient-generator-color-custom-add":
          this.addCustomColor();
          break;
@@ -69,7 +69,7 @@
    spawnDot(dotData, primary = false) {
      const dotPad = this.panel.querySelector(".zen-theme-picker-gradient");
      const relativePosition = {
-@@ -1229,7 +1265,10 @@
+@@ -1432,7 +1468,10 @@
    onOpacityChange(event) {
      this.currentOpacity = parseFloat(event.target.value);
      // If we reached a whole number (e.g., 0.1, 0.2, etc.), send a haptic feedback.
@@ -81,9 +81,9 @@
        Services.zen.playHapticFeedback();
        this._lastHapticFeedback = Math.round(this.currentOpacity * 10);
      }
-@@ -1343,22 +1382,10 @@
+@@ -1568,22 +1607,10 @@
+     this.#currentLightness = themedColors[0]?.lightness ?? 50;
  
-     const rotation = -30; // TODO: Detect rotation based on the accent color
      if (themedColors.length === 0) {
 -      const getBrowserBg = () => {
 -        if (this.canBeTransparent) {
@@ -108,12 +108,16 @@
      } else if (themedColors.length === 1) {
        return this.#getSingleRGBColor(themedColors[0], forToolbar);
      }
-@@ -1443,10 +1470,18 @@
-     return darkContrast > lightContrast;
+@@ -1631,14 +1658,22 @@
    }
  
--  static getTheme(colors = [], opacity = 0.5, texture = 0) {
-+  static getTheme(colors = undefined, opacity = 0.5, texture = 0) {
+   static getTheme(
+-    colors = [],
++    colors = undefined,
+     opacity = 0.5,
+     texture = 0,
+     textureType = kDefaultTexture
+   ) {
 +    const resolved =
 +      colors === undefined
 +        ? DEFAULT_MINT_COLORS.map(color => ({
@@ -128,8 +132,8 @@
 +      gradientColors: resolved ? resolved.filter(color => color) : [], // remove undefined
        opacity,
        texture,
-     };
-@@ -1574,13 +1609,19 @@
+       textureType,
+@@ -1793,13 +1828,19 @@
          return;
        }
  
@@ -150,7 +154,7 @@
          for (const dot of browser.gZenThemePicker.panel.querySelectorAll(
            ".zen-theme-picker-dot"
          )) {
-@@ -1625,7 +1666,9 @@
+@@ -1845,7 +1886,9 @@
          delete browser.gZenThemePicker.previousBackgroundOpacity;
        }
  
@@ -161,7 +165,7 @@
  
        browser.gZenThemePicker.currentOpacity = workspaceTheme.opacity ?? 0.5;
        browser.gZenThemePicker.currentTexture = workspaceTheme.texture ?? 0;
-@@ -1642,7 +1685,7 @@
+@@ -1864,7 +1907,7 @@
          "PanelUI-zen-gradient-generator-opacity"
        );
  
@@ -170,7 +174,7 @@
          let opacity = browser.gZenThemePicker.currentOpacity;
          const svg = browser.gZenThemePicker.sliderWavePath;
          /* eslint-disable no-unused-vars */
-@@ -1684,6 +1727,7 @@
+@@ -1906,6 +1949,7 @@
              : "url(#PanelUI-zen-gradient-generator-slider-wave-gradient)";
        }
  
@@ -178,7 +182,7 @@
        for (const button of browser.document.querySelectorAll(
          "#PanelUI-zen-gradient-generator-color-actions button"
        )) {
-@@ -1744,6 +1788,7 @@
+@@ -1970,6 +2014,7 @@
            }
          }
        }
@@ -186,8 +190,8 @@
  
        const gradient = browser.gZenThemePicker.getGradient(
          workspaceTheme.gradientColors
-@@ -1756,10 +1801,12 @@
-         browser.gZenThemePicker.updateNoise(workspaceTheme.texture);
+@@ -1985,10 +2030,12 @@
+         );
        }
  
 -      browser.gZenThemePicker.customColorList.innerHTML = "";
@@ -203,7 +207,7 @@
          }
        }
  
-@@ -1825,7 +1872,7 @@
+@@ -2051,7 +2098,7 @@
          }
        }
  
@@ -212,7 +216,7 @@
          browser.gZenThemePicker.dots = [];
          browser.gZenThemePicker.recalculateDots(workspaceTheme.gradientColors);
        }
-@@ -2041,12 +2088,28 @@
+@@ -2268,12 +2315,28 @@
  
    handlePanelOpen() {
      this.initThemePicker();
