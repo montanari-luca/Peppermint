@@ -1,5 +1,3 @@
-diff --git a/browser/components/migration/MigrationUtils.sys.mjs b/browser/components/migration/MigrationUtils.sys.mjs
-index 1289865805d2d6cbb7813da5fabf000284d7ac4c..af374fd0f194c3ba270a1dfa4e52eef4aac519a6 100644
 --- a/browser/components/migration/MigrationUtils.sys.mjs
 +++ b/browser/components/migration/MigrationUtils.sys.mjs
 @@ -16,6 +16,7 @@ ChromeUtils.defineESModuleGetters(lazy, {

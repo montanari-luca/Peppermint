@@ -1,5 +1,3 @@
-diff --git a/testing/profiles/mochitest/user.js b/testing/profiles/mochitest/user.js
-index 782258420cdce901f182897b796731a1fdf69ecf..916139c619d989475923fae26c1acb2e2e90e5ca 100644
 --- a/testing/profiles/mochitest/user.js
 +++ b/testing/profiles/mochitest/user.js
 @@ -36,3 +36,10 @@ user_pref("places.history.floodingPrevention.enabled", false);
