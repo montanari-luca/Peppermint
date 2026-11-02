@@ -12,3 +12,4 @@ src/zen/tests/** linguist-language=C++
 configs/branding/** merge=ours
 surfer.json merge=peppermint-surfer
 package-lock.json merge=peppermint-lockfile
+*.patch text eol=lf
