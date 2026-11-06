@@ -13,3 +13,6 @@ configs/branding/** merge=ours
 surfer.json merge=peppermint-surfer
 package-lock.json merge=peppermint-lockfile
 *.patch text eol=lf
+
+# Git hooks run under sh, which breaks on CRLF line endings.
+.husky/* text eol=lf
