@@ -26,7 +26,8 @@ function git(...args) {
 }
 
 function lines(text) {
-  return text.split("\n").filter(Boolean);
+  // Windows checkouts may have CRLF line endings.
+  return text.split(/\r?\n/).filter(Boolean);
 }
 
 const owned = JSON.parse(fs.readFileSync(path.join(root, "peppermint", "owned-paths.json"), "utf8"));

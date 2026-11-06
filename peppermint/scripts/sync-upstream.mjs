@@ -75,7 +75,7 @@ function conflicts() {
 
 if (!merge.ok) {
   const compat = fs.existsSync(path.join(root, owned.compatList))
-    ? fs.readFileSync(path.join(root, owned.compatList), "utf8").split("\n").filter(Boolean)
+    ? fs.readFileSync(path.join(root, owned.compatList), "utf8").split(/\r?\n/).filter(Boolean)
     : [];
   for (const file of conflicts()) {
     if (owned.deleted.includes(file)) {

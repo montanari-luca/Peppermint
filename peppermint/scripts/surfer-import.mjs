@@ -202,7 +202,7 @@ function regenerate(patchRel) {
 
 const rewritten = new Set(
   fs.existsSync(listFile)
-    ? fs.readFileSync(listFile, "utf8").split("\n").filter(Boolean)
+    ? fs.readFileSync(listFile, "utf8").split(/\r?\n/).filter(Boolean)
     : []
 );
 
