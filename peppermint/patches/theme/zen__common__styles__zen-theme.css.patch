@@ -64,7 +64,7 @@
    --zen-main-browser-background-toolbar: var(--zen-main-browser-background);
  
    --browser-area-z-index-toolbox: 2 !important;
-@@ -353,6 +365,24 @@
+@@ -356,6 +368,24 @@
    }
  }
  

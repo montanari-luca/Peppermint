@@ -18,6 +18,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   engineDir,
   filesDir,
@@ -117,7 +118,8 @@ export function recordPatch(input, feature, { source } = {}) {
   return out;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL so the check also matches Windows paths (file:///C:/...).
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [input, feature] = process.argv.slice(2);
   if (!input) {
     console.error("usage: npm run pm:record -- <engine path> [feature]");

@@ -1,6 +1,6 @@
 --- a/zen/split-view/zen-split-group.inc.css
 +++ b/zen/split-view/zen-split-group.inc.css
-@@ -130,12 +130,14 @@
+@@ -130,11 +130,13 @@
      }
  
      & .tab-close-button,
@@ -9,14 +9,23 @@
        display: none !important;
      }
  
+-    :root[zen-sidebar-expanded='true'] & > .tabbrowser-tab:not([pinned]:not([pending])) .tab-close-button {
++    :root[zen-sidebar-expanded='true'] & > .tabbrowser-tab:not([pinned]:not([pending])) .tab-close-button,
++    :root[zen-sidebar-expanded='true'] & > .tabbrowser-tab:not([pinned]:not([pending])) .tab-split-button {
+       display: block !important;
+       visibility: collapse !important;
+ 
+@@ -143,7 +145,8 @@
+     }
+ 
      @container browser-tab (min-width: 70px) {
 -      :root[zen-sidebar-expanded='true'] &:hover > .tabbrowser-tab:not([pinned]:not([pending])) .tab-close-button {
 +      :root[zen-sidebar-expanded='true'] &:hover > .tabbrowser-tab:not([pinned]:not([pending])) .tab-close-button,
 +      :root[zen-sidebar-expanded='true'] &:hover > .tabbrowser-tab:not([pinned]:not([pending])) .tab-split-button {
-         display: block !important;
- 
-         /* This is from Firefox itself, but we need to always override it */
-@@ -175,7 +177,8 @@
+         visibility: visible !important;
+       }
+     }
+@@ -180,7 +183,8 @@
    margin: 2px 0 0 0 !important;
  }
  

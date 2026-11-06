@@ -5,8 +5,8 @@
          </vbox>
          <image class="tab-note-icon" role="presentation"/>
 +          <image class="tab-split-button split-icon" role="button" data-l10n-id="tab-zen-split-tabs" data-l10n-args='{"tabCount": 1}' keyNav="false"/>
-         <image class="tab-close-button close-icon" role="button" data-l10n-id="tabbrowser-close-tabs-button" data-l10n-args='{"tabCount": 1}' keyNav="false"/>
-           <image class="tab-reset-button reset-icon" role="button" data-l10n-id="tabbrowser-unload-tab-button" data-l10n-args='{"tabCount": 1}' keyNav="false"/>
+         <box class="tab-close-button close-icon" role="button" data-l10n-id="tabbrowser-close-tabs-button" data-l10n-args='{"tabCount": 1}' keyNav="false"/>
+           <box class="tab-reset-button reset-icon" role="button" data-l10n-id="tabbrowser-unload-tab-button" data-l10n-args='{"tabCount": 1}' keyNav="false"/>
        </hbox>
 @@ -594,6 +595,7 @@
        this.style.MozUserFocus = "";

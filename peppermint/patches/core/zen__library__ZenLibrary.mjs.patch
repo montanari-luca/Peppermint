@@ -10,7 +10,7 @@
  const HIDDEN_TABS_PREF = "zen.library.hidden-tabs";
  const CLEANUP_DELAY_MS = 30000;
  const IDLE_CLEANUP_TIMEOUT_MS = 2000;
-@@ -113,9 +114,22 @@
+@@ -113,11 +114,24 @@
        history: lazy.ZenLibraryHistorySection,
      };
      this.customizing = false;
@@ -18,8 +18,8 @@
 -    this.activeTab = lastTab in this.zenLibrarySections ? lastTab : "history";
 +    this.activeTab = this.#resolveDefaultSection();
      this.#mounted.add(this.activeTab);
-+  }
-+
+   }
+ 
 +  #resolveDefaultSection() {
 +    const section = Services.prefs.getStringPref(
 +      DEFAULT_SECTION_PREF,
@@ -32,9 +32,11 @@
 +      return DEFAULT_SECTION_FALLBACK;
 +    }
 +    return "history";
-   }
- 
++  }
++
    #tabsObserver = {
+     observe: () => this.requestUpdate(),
+   };
 @@ -219,7 +233,6 @@
  
      this._activeTab = value;
@@ -43,28 +45,28 @@
    }
  
    get activeTab() {
-@@ -526,6 +539,9 @@
-         this.animateProgress(1);
+@@ -527,6 +540,9 @@
        }
        return;
-+    }
+     }
 +    if (!opening) {
 +      lib.activeTab = lib.#resolveDefaultSection();
-     }
++    }
      this.animateProgress(opening ? 0 : 1);
    }
-@@ -666,6 +682,10 @@
-     lib.#cancelIdleCleanup();
+ 
+@@ -667,6 +683,10 @@
      lib.#canSwipe = true;
      lib.#beforeSwipeState = this.isLibraryOpen ? 1 : 0;
-+
+ 
 +    if (!this.isLibraryOpen) {
 +      lib.activeTab = lib.#resolveDefaultSection();
 +    }
- 
++
      await lib.#whenStylesLoaded();
      await window.promiseDocumentFlushed(() => {});
-@@ -1038,7 +1058,7 @@
+     // The swipe may already have ended, its own animation taking over.
+@@ -1045,7 +1065,7 @@
          image: "chrome://browser/skin/zen-icons/heart-circle-fill.svg",
          l10nId: "library-footer-donate-button",
          command: () => {

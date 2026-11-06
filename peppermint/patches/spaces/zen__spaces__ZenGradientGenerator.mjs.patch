@@ -1,6 +1,6 @@
 --- a/zen/spaces/ZenGradientGenerator.mjs
 +++ b/zen/spaces/ZenGradientGenerator.mjs
-@@ -204,6 +204,27 @@
+@@ -139,6 +139,27 @@
  });
  
  const EXPLICIT_LIGHTNESS_TYPE = "explicit-lightness";
@@ -28,7 +28,7 @@
  const EXPLICIT_BLACKWHITE_TYPE = "explicit-black-white";
  
  /**
-@@ -227,6 +248,7 @@
+@@ -162,6 +183,7 @@
    );
  
    #linePath = `M 51.373 27.395 L 367.037 27.395`;
@@ -36,7 +36,7 @@
    #sinePath = `M 51.373 27.395 C 60.14 -8.503 68.906 -8.503 77.671 27.395 C 86.438 63.293 95.205 63.293 103.971 27.395 C 112.738 -8.503 121.504 -8.503 130.271 27.395 C 139.037 63.293 147.803 63.293 156.57 27.395 C 165.335 -8.503 174.101 -8.503 182.868 27.395 C 191.634 63.293 200.4 63.293 209.167 27.395 C 217.933 -8.503 226.7 -8.503 235.467 27.395 C 244.233 63.293 252.999 63.293 261.765 27.395 C 270.531 -8.503 279.297 -8.503 288.064 27.395 C 296.83 63.293 305.596 63.293 314.363 27.395 C 323.13 -8.503 331.896 -8.503 340.662 27.395 M 314.438 27.395 C 323.204 -8.503 331.97 -8.503 340.737 27.395 C 349.503 63.293 358.27 63.293 367.037 27.395`;
  
    #sinePoints = parseSinePath(this.#sinePath);
-@@ -909,7 +931,7 @@
+@@ -861,7 +883,7 @@
    }
  
    handlePanelCommand(event) {
@@ -45,31 +45,29 @@
      if (!target) {
        return;
      }
-@@ -917,9 +939,23 @@
+@@ -869,7 +891,21 @@
        case "PanelUI-zen-gradient-generator-color-custom-add":
          this.addCustomColor();
          break;
 +      case "PanelUI-zen-gradient-generator-reset-default":
 +        this.resetToDefaultTheme();
 +        break;
-     }
-   }
- 
++    }
++  }
++
 +  resetToDefaultTheme() {
 +    const workspace = this.workspaceBeingEdited;
 +    if (!workspace) {
 +      return;
-+    }
+     }
 +    workspace.theme = nsZenThemePicker.getTheme();
 +    this.useAlgo = "analogous";
 +    gZenWorkspaces.saveWorkspace(workspace);
 +    this.onWorkspaceChange(workspace);
-+  }
-+
+   }
+ 
    spawnDot(dotData, primary = false) {
-     const dotPad = this.panel.querySelector(".zen-theme-picker-gradient");
-     const relativePosition = {
-@@ -1432,7 +1468,10 @@
+@@ -1384,7 +1420,10 @@
    onOpacityChange(event) {
      this.currentOpacity = parseFloat(event.target.value);
      // If we reached a whole number (e.g., 0.1, 0.2, etc.), send a haptic feedback.
@@ -81,7 +79,7 @@
        Services.zen.playHapticFeedback();
        this._lastHapticFeedback = Math.round(this.currentOpacity * 10);
      }
-@@ -1568,22 +1607,10 @@
+@@ -1682,22 +1721,10 @@
      this.#currentLightness = themedColors[0]?.lightness ?? 50;
  
      if (themedColors.length === 0) {
@@ -108,7 +106,7 @@
      } else if (themedColors.length === 1) {
        return this.#getSingleRGBColor(themedColors[0], forToolbar);
      }
-@@ -1631,14 +1658,22 @@
+@@ -1761,14 +1788,22 @@
    }
  
    static getTheme(
@@ -133,7 +131,7 @@
        opacity,
        texture,
        textureType,
-@@ -1793,13 +1828,19 @@
+@@ -1921,13 +1956,19 @@
          return;
        }
  
@@ -154,7 +152,7 @@
          for (const dot of browser.gZenThemePicker.panel.querySelectorAll(
            ".zen-theme-picker-dot"
          )) {
-@@ -1845,7 +1886,9 @@
+@@ -1973,7 +2014,9 @@
          delete browser.gZenThemePicker.previousBackgroundOpacity;
        }
  
@@ -165,7 +163,7 @@
  
        browser.gZenThemePicker.currentOpacity = workspaceTheme.opacity ?? 0.5;
        browser.gZenThemePicker.currentTexture = workspaceTheme.texture ?? 0;
-@@ -1864,7 +1907,7 @@
+@@ -1992,7 +2035,7 @@
          "PanelUI-zen-gradient-generator-opacity"
        );
  
@@ -174,7 +172,7 @@
          let opacity = browser.gZenThemePicker.currentOpacity;
          const svg = browser.gZenThemePicker.sliderWavePath;
          /* eslint-disable no-unused-vars */
-@@ -1906,6 +1949,7 @@
+@@ -2034,6 +2077,7 @@
              : "url(#PanelUI-zen-gradient-generator-slider-wave-gradient)";
        }
  
@@ -182,7 +180,7 @@
        for (const button of browser.document.querySelectorAll(
          "#PanelUI-zen-gradient-generator-color-actions button"
        )) {
-@@ -1970,6 +2014,7 @@
+@@ -2098,6 +2142,7 @@
            }
          }
        }
@@ -190,7 +188,7 @@
  
        const gradient = browser.gZenThemePicker.getGradient(
          workspaceTheme.gradientColors
-@@ -1985,10 +2030,12 @@
+@@ -2113,10 +2158,12 @@
          );
        }
  
@@ -207,7 +205,7 @@
          }
        }
  
-@@ -2051,7 +2098,7 @@
+@@ -2179,7 +2226,7 @@
          }
        }
  
@@ -216,7 +214,7 @@
          browser.gZenThemePicker.dots = [];
          browser.gZenThemePicker.recalculateDots(workspaceTheme.gradientColors);
        }
-@@ -2268,12 +2315,28 @@
+@@ -2396,12 +2443,28 @@
  
    handlePanelOpen() {
      this.initThemePicker();
