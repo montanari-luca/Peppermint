@@ -1,12 +1,9 @@
 --- a/zen/spaces/zen-gradient-generator.css
 +++ b/zen/spaces/zen-gradient-generator.css
-@@ -139,6 +139,30 @@
-         }
-       }
-     }
-+  }
-+}
-+
+@@ -142,6 +142,30 @@
+   }
+ }
+ 
 +#PanelUI-zen-gradient-generator-reset {
 +  width: 100%;
 +  justify-content: center;
@@ -28,6 +25,9 @@
 +
 +  &:hover {
 +    background: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.12));
-   }
- }
++  }
++}
++
+ #PanelUI-zen-gradient-generator-custom-list {
+   margin-top: 15px;
  

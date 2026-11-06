@@ -1,6 +1,6 @@
 --- a/zen/common/modules/ZenVerticalTabsManager.mjs
 +++ b/zen/common/modules/ZenVerticalTabsManager.mjs
-@@ -124,7 +124,8 @@
+@@ -158,7 +158,8 @@
      };
  
      try {

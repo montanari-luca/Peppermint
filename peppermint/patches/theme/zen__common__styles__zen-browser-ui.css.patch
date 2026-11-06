@@ -1,6 +1,6 @@
 --- a/zen/common/styles/zen-browser-ui.css
 +++ b/zen/common/styles/zen-browser-ui.css
-@@ -51,6 +51,10 @@
+@@ -132,6 +132,10 @@
      inset: 0;
      z-index: 0;
      pointer-events: none;
@@ -11,7 +11,7 @@
      will-change: background-color;
    }
  
-@@ -64,6 +68,9 @@
+@@ -144,6 +148,9 @@
    &:is(.zen-toolbar-background) {
      &::after {
        background: var(--zen-main-browser-background-toolbar);
@@ -21,7 +21,7 @@
      }
    }
  
-@@ -77,6 +84,7 @@
+@@ -156,6 +163,7 @@
    &:is(.zen-toolbar-background) {
      &::before {
        background: var(--zen-main-browser-background-toolbar-old);
@@ -29,7 +29,7 @@
      }
    }
  
-@@ -200,27 +208,6 @@
+@@ -301,27 +309,6 @@
    @media -moz-pref("zen.widget.mac.mono-window-controls") {
      :root:not([window-modal-open="true"]) .titlebar-buttonbox-container {
        color: var(--toolbox-textcolor);

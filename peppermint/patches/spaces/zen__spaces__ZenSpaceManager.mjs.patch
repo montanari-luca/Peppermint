@@ -201,7 +201,7 @@
      window.addEventListener("TabAddedToEssentials", tabUpdateListener);
      window.addEventListener("TabRemovedFromEssentials", tabUpdateListener);
      window.addEventListener("TabPinned", tabUpdateListener);
-@@ -1862,6 +1908,7 @@
+@@ -1874,6 +1920,7 @@
        }
      }
      gBrowser.tabContainer._invalidateCachedTabs();
@@ -209,7 +209,7 @@
      return true;
    }
  
-@@ -1962,7 +2009,10 @@
+@@ -1974,7 +2021,10 @@
    }
  
    _cancelSwipeAnimation() {
@@ -221,7 +221,7 @@
    }
  
    async #performWorkspaceChange(
-@@ -2688,7 +2738,9 @@
+@@ -2701,7 +2751,9 @@
      this.workspaceIcons.activeIndex = workspace.uuid;
      await this.#animateTabs(
        workspace,
@@ -232,7 +232,7 @@
        tabToSelect,
        {
          previousWorkspaceIndex,
-@@ -2843,16 +2895,22 @@
+@@ -2856,16 +2908,22 @@
        let label =
          ContextualIdentityService.getUserContextLabel(containerTabId) ||
          "Default";
@@ -257,7 +257,7 @@
        containerTabId,
      };
      return workspace;
-@@ -2945,14 +3003,21 @@
+@@ -2958,13 +3016,20 @@
  
    #allPinnedContainers() {
      const containers = [];
@@ -273,7 +273,7 @@
 +    )?.pinnedTabsContainer;
 +    if (active) {
 +      containers.push(active);
-     }
++    }
 +    const containerId = this.containerSpecificEssentials
 +      ? this.getCurrentSpaceContainerId()
 +      : 0;
@@ -282,11 +282,10 @@
 +    );
 +    if (essentials) {
 +      containers.push(essentials);
-+    }
+     }
      return containers.length ? containers : [this.pinnedTabsContainer];
    }
- 
-@@ -3128,6 +3193,7 @@
+@@ -3141,6 +3206,7 @@
        isEmpty
      );
      document.documentElement.setAttribute("zen-has-empty-tab", isEmpty);
@@ -294,7 +293,7 @@
    }
  
    async onLocationChange(event) {
-@@ -3402,6 +3468,24 @@
+@@ -3417,6 +3483,24 @@
    }
  
    // Session restore functions
@@ -319,7 +318,7 @@
    get allStoredTabs() {
      if (this._allStoredTabs) {
        return this._allStoredTabs;
-@@ -3679,6 +3763,7 @@
+@@ -3694,6 +3778,7 @@
          pinnedContainer.insertBefore(tab, pinnedContainer.lastChild);
        }
      }

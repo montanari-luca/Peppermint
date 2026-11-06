@@ -1,6 +1,6 @@
 --- a/zen/boosts/ZenBoostsEditor.mjs
 +++ b/zen/boosts/ZenBoostsEditor.mjs
-@@ -839,11 +839,13 @@
+@@ -965,11 +965,13 @@
      this.currentBoostData.secondaryDotPos.y = relativeYSec / rect.height;
  
      dot.setAttribute("animated", animate ? "true" : "false");

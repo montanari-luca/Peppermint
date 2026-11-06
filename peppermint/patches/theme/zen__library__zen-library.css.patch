@@ -10,7 +10,7 @@
    }
  }
  
-@@ -355,6 +356,10 @@
+@@ -412,6 +413,10 @@
      mask-size: 150px auto;
      mask-repeat: round repeat;
      animation: zen-library-media-wait 1.8s ease-in-out infinite;
@@ -21,7 +21,7 @@
    }
  
    &[behind] {
-@@ -785,6 +790,10 @@
+@@ -1029,6 +1034,10 @@
  .zen-library-row[indeterminate] .zen-library-row-progress-arc {
    transition: none;
    animation: zen-library-ring-spin 1s linear infinite;

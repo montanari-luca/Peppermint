@@ -1,9 +1,10 @@
 --- a/zen/common/modules/ZenUIManager.mjs
 +++ b/zen/common/modules/ZenUIManager.mjs
-@@ -66,6 +66,12 @@
+@@ -66,6 +66,13 @@
+     gZenVerticalTabsManager.init();
      this.#urlbar.init();
  
-     this.#markAcrylicSupport();
++    this.#markAcrylicSupport();
 +    Services.prefs.addObserver("zen.theme.glass", this.#markAcrylicSupport);
 +    window.addEventListener(
 +      "unload",
@@ -13,30 +14,24 @@
      this.#initCreateNewPopup();
      this.#debloatContextMenus();
      this.#addCompactModeButtonIfNeeded();
-@@ -440,23 +446,34 @@
+@@ -477,6 +484,36 @@
+ 
    // Section: startup DOM tweaks
  
-   /**
--   * Software WebRender can't filter the web content behind the chrome, so the acrylic
--   * elements have nothing to blur there and must stay opaque. Safe mode blocks
--   * hardware acceleration, so it ends up on the same path.
++  /**
 +   * Software WebRender can't filter the web content behind the chrome, so the
 +   * acrylic elements have nothing to blur there and must stay opaque. Safe mode
 +   * and the Glass effects setting use the same opaque path.
-    */
--  #markAcrylicSupport() {
--    let supported = !Services.appinfo.inSafeMode;
++   */
 +  #markAcrylicSupport = () => {
 +    let hardware = !Services.appinfo.inSafeMode;
- 
-     try {
--      supported &&= !window.windowUtils.layerManagerType.includes("Software");
++
++    try {
 +      hardware &&= !window.windowUtils.layerManagerType.includes("Software");
-     } catch (e) {
-       // No widget associated with this window yet, assume hardware rendering.
-     }
- 
--    if (!supported) {
++    } catch (e) {
++      // No widget associated with this window yet, assume hardware rendering.
++    }
++
 +    let glass = true;
 +    try {
 +      glass = Services.prefs.getBoolPref("zen.theme.glass", true);
@@ -47,12 +42,12 @@
 +    // One attribute gates every frosted surface: software rendering, safe
 +    // mode, and the Glass effects setting.
 +    if (!hardware || !glass) {
-       document.documentElement.setAttribute("zen-no-acrylic", "true");
++      document.documentElement.setAttribute("zen-no-acrylic", "true");
 +    } else {
 +      document.documentElement.removeAttribute("zen-no-acrylic");
-     }
--  }
++    }
 +  };
- 
++
    #addCompactModeButtonIfNeeded() {
      const kPref = "zen.ui.migration.compact-mode-button-added";
+     const navbarPlacements = CustomizableUI.getWidgetIdsInArea(

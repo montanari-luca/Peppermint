@@ -1,6 +1,6 @@
 --- a/zen/glance/ZenGlanceManager.mjs
 +++ b/zen/glance/ZenGlanceManager.mjs
-@@ -377,6 +377,7 @@
+@@ -387,6 +387,7 @@
      }
  
      currentTab.querySelector(".tab-content").appendChild(newTab);

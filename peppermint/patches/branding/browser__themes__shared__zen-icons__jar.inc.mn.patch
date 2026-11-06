@@ -1,6 +1,6 @@
 --- a/browser/themes/shared/zen-icons/jar.inc.mn
 +++ b/browser/themes/shared/zen-icons/jar.inc.mn
-@@ -470,6 +470,7 @@
+@@ -484,6 +484,7 @@
  *  skin/classic/browser/zen-icons/xr.svg                      (../shared/zen-icons/nucleo/xr.svg) 
  *  skin/classic/browser/zen-icons/zoom-out.svg                      (../shared/zen-icons/nucleo/zoom-out.svg) 
  #endif
@@ -8,9 +8,9 @@
  *  skin/classic/browser/zen-icons/blank.svg                      (../shared/zen-icons/common/blank.svg) 
  *  skin/classic/browser/zen-icons/urlbar-arrow.svg                      (../shared/zen-icons/common/urlbar-arrow.svg) 
  *  skin/classic/browser/zen-icons/selectable/airplane.svg          (../shared/zen-icons/common/selectable/airplane.svg) 
-@@ -566,6 +567,7 @@
- *  skin/classic/browser/zen-icons/library/library-spaces-sprite.svg          (../shared/zen-icons/common/library/library-spaces-sprite.svg) 
+@@ -580,6 +581,7 @@
  *  skin/classic/browser/zen-icons/library/library-space-routing-sprite.svg          (../shared/zen-icons/common/library/library-space-routing-sprite.svg) 
+ *  skin/classic/browser/zen-icons/library/library-spaces-sprite.svg          (../shared/zen-icons/common/library/library-spaces-sprite.svg) 
  *  skin/classic/browser/zen-icons/library/library-sprite.svg          (../shared/zen-icons/common/library/library-sprite.svg) 
 +   skin/classic/browser/zen-icons/ghost/ghost.png          (../shared/zen-icons/common/ghost/ghost.png) 
  *  skin/classic/browser/zen-icons/library/library-tile.svg          (../shared/zen-icons/common/library/library-tile.svg) 
