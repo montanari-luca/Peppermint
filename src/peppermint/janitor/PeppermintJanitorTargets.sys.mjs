@@ -10,6 +10,7 @@
  */
 
 import {
+  Pacer,
   classify,
   listChildren,
   toFile,
@@ -254,12 +255,14 @@ function skipper(own, extraDeny = null) {
  *   subdirectory: remove it, or only empty it.
  * @param {(name: string) => boolean} [options.skip]
  * @param {boolean} [options.ageGated]
- * @returns {object[]}
+ * @param {Pacer} pacer
+ * @returns {Promise<object[]>}
  */
-function childUnits(
+async function childUnits(
   rootPath,
   group,
-  { dirMode = "contents", skip = () => false, ageGated = true } = {}
+  { dirMode = "contents", skip = () => false, ageGated = true } = {},
+  pacer
 ) {
   const root = rootPath && normalizePath(rootPath);
   if (!root) {
@@ -270,7 +273,8 @@ function childUnits(
     return [];
   }
   const units = [];
-  for (const child of listChildren(dir) || []) {
+  for (const child of (await listChildren(dir, pacer)) || []) {
+    await pacer.tick();
     if (skip(child.leafName)) {
       continue;
     }
@@ -318,7 +322,7 @@ function dirUnit(path, group, ageGated, root) {
   return [{ group, path: resolved, root, mode: "contents", ageGated }];
 }
 
-function tempUnits(env, own) {
+async function tempUnits(env, own, pacer) {
   const skip = skipper(own);
   const roots = [env.tmp, ...(env.extraTmp || [])];
   const seen = new Set();
@@ -329,97 +333,78 @@ function tempUnits(env, own) {
       continue;
     }
     seen.add(resolved);
-    units.push(...childUnits(resolved, "temp", { dirMode: "self", skip }));
+    units.push(
+      ...(await childUnits(resolved, "temp", { dirMode: "self", skip }, pacer))
+    );
   }
   return units;
 }
 
-function traceUnits(env, own) {
+async function traceUnits(env, own, pacer) {
   const skip = skipper(own);
   const { home } = env;
+  const once = { dirMode: "self", ageGated: false };
+  const units = [];
+  // [folder, childUnits options] pairs.
+  let folders = [];
   switch (env.os) {
     case "Darwin": {
       const lib = PathUtils.join(home, "Library");
-      return [
-        ...childUnits(PathUtils.join(lib, "Logs"), "traces", { skip }),
-        ...childUnits(
-          PathUtils.join(lib, "Application Support", "CrashReporter"),
-          "traces"
-        ),
+      folders = [
+        [PathUtils.join(lib, "Logs"), { skip }],
+        [PathUtils.join(lib, "Application Support", "CrashReporter")],
         // The "Open Recent" lists of apps.
-        ...childUnits(
+        [
           PathUtils.join(
             lib,
             "Application Support",
             "com.apple.sharedfilelist",
             "com.apple.LSSharedFileList.ApplicationRecentDocuments"
           ),
-          "traces",
-          { dirMode: "self", ageGated: false }
-        ),
+          once,
+        ],
         // Flash shared objects, long obsolete trackers.
-        ...childUnits(
-          PathUtils.join(lib, "Preferences", "Macromedia"),
-          "traces",
-          { dirMode: "self", ageGated: false }
-        ),
+        [PathUtils.join(lib, "Preferences", "Macromedia"), once],
       ];
+      break;
     }
     case "Linux":
-      return [
+      units.push(
         ...fileUnit(
           PathUtils.join(env.xdgData, "recently-used.xbel"),
           "traces",
           false
-        ),
-        ...childUnits(
-          PathUtils.join(env.xdgData, "RecentDocuments"),
-          "traces",
-          {
-            dirMode: "self",
-            ageGated: false,
-          }
-        ),
-        ...childUnits(PathUtils.join(home, ".macromedia"), "traces", {
-          dirMode: "self",
-          ageGated: false,
-        }),
+        )
+      );
+      folders = [
+        [PathUtils.join(env.xdgData, "RecentDocuments"), once],
+        [PathUtils.join(home, ".macromedia"), once],
       ];
+      break;
     case "WINNT": {
       const local = env.localAppData;
       const roaming = env.appData;
-      return [
-        ...childUnits(
+      folders = [
+        [
           PathUtils.join(roaming, "Microsoft", "Windows", "Recent"),
-          "traces",
-          { ageGated: false }
-        ),
-        ...childUnits(
+          { ageGated: false },
+        ],
+        [
           PathUtils.join(roaming, "Microsoft", "Office", "Recent"),
-          "traces",
-          { ageGated: false }
-        ),
-        ...childUnits(PathUtils.join(local, "CrashDumps"), "traces"),
-        ...childUnits(
-          PathUtils.join(local, "Microsoft", "Windows", "WER", "ReportArchive"),
-          "traces"
-        ),
-        ...childUnits(
-          PathUtils.join(local, "Microsoft", "Windows", "WER", "ReportQueue"),
-          "traces"
-        ),
-        ...childUnits(
-          PathUtils.join(roaming, "Macromedia", "Flash Player"),
-          "traces",
-          {
-            dirMode: "self",
-            ageGated: false,
-          }
-        ),
+          { ageGated: false },
+        ],
+        [PathUtils.join(local, "CrashDumps")],
+        [PathUtils.join(local, "Microsoft", "Windows", "WER", "ReportArchive")],
+        [PathUtils.join(local, "Microsoft", "Windows", "WER", "ReportQueue")],
+        [PathUtils.join(roaming, "Macromedia", "Flash Player"), once],
       ];
+      break;
     }
   }
-  return [];
+  for (const [folder, options] of folders) {
+    units.push(...(await childUnits(folder, "traces", options, pacer)));
+  }
+  return units;
 }
 
 /**
@@ -429,16 +414,22 @@ function traceUnits(env, own) {
  *
  * @param {Environment} env
  * @param {string[]} own
- * @returns {object[]}
+ * @param {Pacer} pacer
+ * @returns {Promise<object[]>}
  */
-function updateUnits(env, own) {
+async function updateUnits(env, own, pacer) {
   const skip = skipper(own);
   const units = [];
   let appRoot;
   switch (env.os) {
     case "Darwin":
       units.push(
-        ...childUnits(PathUtils.join(env.home, "Library", "Updates"), "updates")
+        ...(await childUnits(
+          PathUtils.join(env.home, "Library", "Updates"),
+          "updates",
+          {},
+          pacer
+        ))
       );
       appRoot = PathUtils.join(env.home, "Library", "Caches");
       break;
@@ -453,7 +444,8 @@ function updateUnits(env, own) {
   if (!root || classify(toFile(root)).kind !== "dir") {
     return units;
   }
-  for (const app of listChildren(toFile(root)) || []) {
+  for (const app of (await listChildren(toFile(root), pacer)) || []) {
+    await pacer.tick();
     const name = app.leafName;
     if (skip(name) || classify(app).kind !== "dir") {
       continue;
@@ -467,7 +459,8 @@ function updateUnits(env, own) {
         ...dirUnit(PathUtils.join(app.path, "pending"), "updates", true, root)
       );
     }
-    for (const sub of listChildren(app) || []) {
+    for (const sub of (await listChildren(app, pacer)) || []) {
+      await pacer.tick();
       if (
         (sub.leafName === "org.sparkle-project.Sparkle" ||
           sub.leafName.endsWith(".ShipIt")) &&
@@ -486,9 +479,10 @@ function updateUnits(env, own) {
  *
  * @param {Environment} env
  * @param {string[]} own
- * @returns {object[]}
+ * @param {Pacer} pacer
+ * @returns {Promise<object[]>}
  */
-function windowsCacheUnits(env, own) {
+async function windowsCacheUnits(env, own, pacer) {
   const root = env.localAppData && normalizePath(env.localAppData);
   if (!root || classify(toFile(root)).kind !== "dir") {
     return [];
@@ -498,7 +492,8 @@ function windowsCacheUnits(env, own) {
   const queue = [{ dir: toFile(root), depth: 0 }];
   while (queue.length) {
     const { dir, depth } = queue.shift();
-    for (const child of listChildren(dir) || []) {
+    for (const child of (await listChildren(dir, pacer)) || []) {
+      await pacer.tick();
       const lower = child.leafName.toLowerCase();
       if (skip(child.leafName) || classify(child).kind !== "dir") {
         continue;
@@ -524,18 +519,19 @@ function windowsCacheUnits(env, own) {
   return units;
 }
 
-function cacheUnits(env, own) {
+async function cacheUnits(env, own, pacer) {
   switch (env.os) {
     case "Darwin":
       return childUnits(
         PathUtils.join(env.home, "Library", "Caches"),
         "caches",
-        { skip: skipper(own, MAC_CACHE_DENY) }
+        { skip: skipper(own, MAC_CACHE_DENY) },
+        pacer
       );
     case "Linux":
-      return childUnits(env.xdgCache, "caches", { skip: skipper(own) });
+      return childUnits(env.xdgCache, "caches", { skip: skipper(own) }, pacer);
     case "WINNT":
-      return windowsCacheUnits(env, own);
+      return windowsCacheUnits(env, own, pacer);
   }
   return [];
 }
@@ -545,18 +541,35 @@ function cacheUnits(env, own) {
  * Windows it goes through the shell API instead (see the recycle bin worker).
  *
  * @param {Environment} env
- * @returns {object[]}
+ * @param {string[]} own
+ * @param {Pacer} pacer
+ * @returns {Promise<object[]>}
  */
-function trashUnits(env) {
+async function trashUnits(env, own, pacer) {
   const options = { dirMode: "self", ageGated: false };
   switch (env.os) {
     case "Darwin":
-      return childUnits(PathUtils.join(env.home, ".Trash"), "trash", options);
+      return childUnits(
+        PathUtils.join(env.home, ".Trash"),
+        "trash",
+        options,
+        pacer
+      );
     case "Linux": {
       const trash = PathUtils.join(env.xdgData, "Trash");
       return [
-        ...childUnits(PathUtils.join(trash, "files"), "trash", options),
-        ...childUnits(PathUtils.join(trash, "info"), "trash", options),
+        ...(await childUnits(
+          PathUtils.join(trash, "files"),
+          "trash",
+          options,
+          pacer
+        )),
+        ...(await childUnits(
+          PathUtils.join(trash, "info"),
+          "trash",
+          options,
+          pacer
+        )),
       ];
     }
   }
@@ -564,11 +577,15 @@ function trashUnits(env) {
 }
 
 /**
+ * Finding the units walks folders such as the temp folder and up to five
+ * levels of the Windows app data folder, so it is paced like the cleaning.
+ *
  * @param {Environment} env
  * @param {string[]} groups - A subset of GROUPS.
- * @returns {object[]} Units, in the order of GROUPS.
+ * @param {Pacer} [pacer]
+ * @returns {Promise<object[]>} Units, in the order of GROUPS.
  */
-export function resolveUnits(env, groups) {
+export async function resolveUnits(env, groups, pacer = new Pacer()) {
   if (!env.home || !env.tmp) {
     return [];
   }
@@ -586,7 +603,7 @@ export function resolveUnits(env, groups) {
       continue;
     }
     try {
-      units.push(...builders[group](env, own));
+      units.push(...(await builders[group](env, own, pacer)));
     } catch (e) {
       console.error(`Janitor: could not resolve ${group}`, e);
     }

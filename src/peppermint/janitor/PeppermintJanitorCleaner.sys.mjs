@@ -23,12 +23,24 @@
  *   stays.
  * - Every deleted path must be strictly inside the unit's root, and units
  *   that equal, contain or sit inside a protected path are refused.
- * - Work is cut into short slices on idle time and capped per run.
+ * - Work is cut into short slices on idle time and capped per run. Every
+ *   filesystem call runs on the main thread (nsIFile is the only API that
+ *   does not follow links), so nothing may list or stat more than one slice
+ *   at a time, not even while finding the units (see Pacer).
  */
+
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  setTimeout: "resource://gre/modules/Timer.sys.mjs",
+});
 
 export const MAX_AGE_MS = 72 * 60 * 60 * 1000;
 
 const SLICE_MS = 8;
+// A slow disk can make one call take far longer than a slice; the pause
+// after it is capped so a run still moves on.
+const MAX_REST_MS = 250;
+const IDLE_TIMEOUT_MS = 500;
 const MAX_ENTRIES_PER_RUN = 600000;
 const MAX_DEPTH = 64;
 
@@ -124,10 +136,37 @@ export function classify(file) {
 }
 
 /**
- * @param {nsIFile} dir
- * @returns {nsIFile[]|null} The entries, or null when it cannot be read.
+ * Keeps main-thread filesystem work in short slices. After each slice it
+ * leaves the thread alone for as long as the slice took, then waits until the
+ * browser is idle, so a run uses at most about half a core and input, paint
+ * and page loads always go first.
  */
-export function listChildren(dir) {
+export class Pacer {
+  #sliceStart = ChromeUtils.now();
+
+  async tick() {
+    const elapsed = ChromeUtils.now() - this.#sliceStart;
+    if (elapsed <= SLICE_MS) {
+      return;
+    }
+    await new Promise(resolve =>
+      lazy.setTimeout(resolve, Math.min(elapsed, MAX_REST_MS))
+    );
+    await new Promise(resolve =>
+      ChromeUtils.idleDispatch(() => resolve(), { timeout: IDLE_TIMEOUT_MS })
+    );
+    this.#sliceStart = ChromeUtils.now();
+  }
+}
+
+/**
+ * @param {nsIFile} dir
+ * @param {Pacer} pacer - Temp and cache folders can hold tens of thousands
+ *   of entries, too many to read in one go.
+ * @returns {Promise<nsIFile[]|null>} The entries, or null when it cannot be
+ *   read.
+ */
+export async function listChildren(dir, pacer) {
   let entries;
   try {
     entries = dir.directoryEntries;
@@ -139,6 +178,7 @@ export function listChildren(dir) {
     let child;
     while ((child = entries.nextFile)) {
       children.push(child);
+      await pacer.tick();
     }
   } catch (e) {
     return null;
@@ -160,12 +200,6 @@ function tryRemove(file) {
   } catch (e) {
     return false;
   }
-}
-
-function yieldToIdle() {
-  return new Promise(resolve =>
-    ChromeUtils.idleDispatch(() => resolve(), { timeout: 100 })
-  );
 }
 
 /**
@@ -194,12 +228,13 @@ export class JanitorCleaner {
   #dryRun;
   #now;
   #maxAge;
+  #pacer;
   #entries = 0;
-  #sliceStart = ChromeUtils.now();
 
   /**
    * @param {object} options
    * @param {string} options.home - The user's home directory.
+   * @param {Pacer} [options.pacer] - Shared with whoever found the units.
    * @param {string[]} [options.protectedTrees] - Paths a unit may never
    *   equal, contain or sit inside (profile, app and update directories).
    * @param {string[]} [options.protectedInside] - Paths a unit may never
@@ -215,7 +250,9 @@ export class JanitorCleaner {
     dryRun = false,
     now = Date.now(),
     maxAgeMs = MAX_AGE_MS,
+    pacer = new Pacer(),
   }) {
+    this.#pacer = pacer;
     this.#home = home;
     this.#tree = protectedTrees.filter(Boolean);
     this.#inside = protectedInside.filter(Boolean);
@@ -260,10 +297,11 @@ export class JanitorCleaner {
     if (++this.#entries > MAX_ENTRIES_PER_RUN) {
       throw new TruncatedError();
     }
-    if (ChromeUtils.now() - this.#sliceStart > SLICE_MS) {
-      await yieldToIdle();
-      this.#sliceStart = ChromeUtils.now();
-    }
+    await this.#pacer.tick();
+  }
+
+  #listChildren(dir) {
+    return listChildren(dir, this.#pacer);
   }
 
   #isValidRoot(root) {
@@ -422,7 +460,9 @@ export class JanitorCleaner {
       return total;
     }
 
-    const stack = [{ children: listChildren(root), index: 0, depth: 0 }];
+    const stack = [
+      { children: await this.#listChildren(root), index: 0, depth: 0 },
+    ];
     while (stack.length && !total.active) {
       const frame = stack[stack.length - 1];
       if (!frame.children) {
@@ -444,7 +484,7 @@ export class JanitorCleaner {
         }
         total.dirs++;
         stack.push({
-          children: listChildren(child),
+          children: await this.#listChildren(child),
           index: 0,
           depth: frame.depth + 1,
         });
@@ -486,7 +526,9 @@ export class JanitorCleaner {
       return removed;
     }
 
-    const stack = [{ dir: root, children: listChildren(root), index: 0 }];
+    const stack = [
+      { dir: root, children: await this.#listChildren(root), index: 0 },
+    ];
     while (stack.length) {
       const frame = stack[stack.length - 1];
       if (!frame.children || frame.index >= frame.children.length) {
@@ -506,7 +548,11 @@ export class JanitorCleaner {
       const info = classify(child);
       if (info.kind === "dir") {
         if (stack.length < MAX_DEPTH) {
-          stack.push({ dir: child, children: listChildren(child), index: 0 });
+          stack.push({
+            dir: child,
+            children: await this.#listChildren(child),
+            index: 0,
+          });
         }
       } else {
         removeLeaf(child, info);

@@ -10,7 +10,7 @@ const { JanitorCleaner, UnitStatus, MAX_AGE_MS, toFile } =
   ChromeUtils.importESModule(
     "moz-src:///peppermint/janitor/PeppermintJanitorCleaner.sys.mjs"
   );
-const { normalizePath } = ChromeUtils.importESModule(
+const { normalizePath, resolveUnits } = ChromeUtils.importESModule(
   "moz-src:///peppermint/janitor/PeppermintJanitorTargets.sys.mjs"
 );
 const { PeppermintJanitor, PREFS } = ChromeUtils.importESModule(
@@ -456,6 +456,42 @@ add_task(async function test_pipeline_cleans_enabled_groups_only() {
   );
   Assert.equal(second.totalBytes, 2 * MIB);
   Assert.ok(!(await exists(join(machine.cacheDir, "blob"))));
+});
+
+// Finding the units once ran in one blocking pass over the temp folder and
+// the Windows app data tree, which froze the browser for seconds at start.
+add_task(async function test_finding_units_is_paced() {
+  const machine = await fixtureMachine("paced");
+  const entries = 200;
+  for (let i = 0; i < entries; i++) {
+    await write(join(machine.environment.tmp, `e${i}`), { bytes: 1 });
+  }
+  let ticks = 0;
+  const pacer = {
+    async tick() {
+      ticks++;
+      await Promise.resolve();
+    },
+  };
+  const pending = resolveUnits(
+    machine.environment,
+    ["temp", "caches"],
+    pacer
+  );
+  Assert.ok(pending instanceof Promise, "Finding units does not block");
+  const units = await pending;
+  Assert.greater(ticks, entries, "Every listed entry goes through the pacer");
+  Assert.equal(
+    units.filter(u => u.group === "temp").length,
+    entries + 1,
+    "Every temp entry became a unit"
+  );
+  Assert.ok(
+    units.some(
+      u => u.group === "caches" && u.path === normalizePath(machine.cacheDir)
+    ),
+    "The cache folder was found"
+  );
 });
 
 add_task(async function test_pipeline_uses_group_prefs() {

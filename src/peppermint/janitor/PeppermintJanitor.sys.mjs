@@ -12,6 +12,7 @@
 
 import {
   JanitorCleaner,
+  Pacer,
   UnitStatus,
 } from "moz-src:///peppermint/janitor/PeppermintJanitorCleaner.sys.mjs";
 import {
@@ -303,15 +304,17 @@ class PeppermintJanitorImpl {
 
     if (env.home && env.tmp) {
       const home = normalizePath(env.home) ?? env.home;
+      const pacer = new Pacer();
       const cleaner = new JanitorCleaner({
         home,
         protectedTrees: options.protectedTrees ?? getProtectedTrees(),
         protectedInside:
           options.protectedFolders ?? getProtectedFolders(env.home),
         dryRun,
+        pacer,
         ...(options.now ? { now: options.now } : {}),
       });
-      const units = resolveUnits(env, groups);
+      const units = await resolveUnits(env, groups, pacer);
       const results = await cleaner.run(units);
       if (dryRun) {
         for (const { unit, status, bytes } of results) {
