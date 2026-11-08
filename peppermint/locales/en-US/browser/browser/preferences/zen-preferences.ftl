@@ -499,3 +499,136 @@ peppermint-tabs-confirm-close-middle-click =
 
 peppermint-tabs-islands =
     .label = Group tabs opened from a tab into an island
+
+## Peppermint features pane. One name, description and keywords message per
+## entry of src/peppermint/features/PeppermintFeatures.sys.mjs. Keywords are
+## extra words Settings search matches; they are never shown.
+
+pane-zen-peppermint-title = Peppermint Features
+
+category-zen-peppermint =
+    .tooltiptext = { pane-zen-peppermint-title }
+
+peppermint-features-section-title = Peppermint Features
+peppermint-features-category-privacy = Privacy
+peppermint-features-category-tabs = Tabs
+peppermint-features-category-address-bar = Address Bar
+peppermint-features-category-tools = Tools
+peppermint-features-category-system = System
+
+peppermint-features-open =
+    .label = Open
+peppermint-features-options =
+    .label = Options
+
+peppermint-feature-ad-blocker = Ad Blocker
+peppermint-feature-ad-blocker-description = Blocks ads and trackers with the blocker you pick.
+peppermint-feature-ad-blocker-keywords = ads, advertising, ublock, adguard, trackers, block
+
+peppermint-feature-cookie-banner-blocker = Cookie Banner Blocker
+peppermint-feature-cookie-banner-blocker-description = Answers cookie consent banners for you, refusing what it can.
+peppermint-feature-cookie-banner-blocker-keywords = cookies, consent, gdpr, popup, banner
+
+peppermint-feature-tracking-parameter-removal = Tracking Parameter Removal
+peppermint-feature-tracking-parameter-removal-description = Strips tracking codes such as utm_source and fbclid from links you open.
+peppermint-feature-tracking-parameter-removal-keywords = clean links, utm, fbclid, query stripping, url
+
+peppermint-feature-clean-links = Clean Links
+peppermint-feature-clean-links-description = Skips click trackers and AMP pages and goes straight to where a link leads.
+peppermint-feature-clean-links-keywords = redirect, click tracking, amp, outbound links, google url, unwrap
+
+peppermint-feature-lookalike-warning = Lookalike Site Warning
+peppermint-feature-lookalike-warning-description = Warns you when a site you have never visited uses a name made to look like a popular one.
+peppermint-feature-lookalike-warning-keywords = phishing, scam, fake, typo, punycode, homograph, impersonation
+
+peppermint-feature-permission-auto-revoke = Unused Permission Removal
+peppermint-feature-permission-auto-revoke-description = Takes back camera, microphone, location and notification access from sites you have not visited in 90 days.
+peppermint-feature-permission-auto-revoke-keywords = camera, microphone, location, notifications, revoke, expire, permissions
+
+peppermint-feature-fingerprinting-protection = Fingerprinting Protection
+peppermint-feature-fingerprinting-protection-description = Makes it harder for sites to recognize your device without cookies.
+peppermint-feature-fingerprinting-protection-keywords = fingerprint, tracking, canvas, identify
+
+peppermint-feature-ghost-mode = Ghost Mode
+peppermint-feature-ghost-mode-description = Private windows that leave no history and can delete their downloads.
+peppermint-feature-ghost-mode-keywords = private, incognito, private browsing
+
+peppermint-feature-vault = Vault
+peppermint-feature-vault-description = Passwords, two-factor codes and site permissions behind one lock.
+peppermint-feature-vault-keywords = passwords, logins, 2fa, totp, authenticator, permissions
+
+peppermint-feature-tab-islands = Tab Islands
+peppermint-feature-tab-islands-description = Groups a tab with the tabs opened from it.
+peppermint-feature-tab-islands-keywords = groups, tree, related tabs
+
+peppermint-feature-tab-archive = Tab Archive
+peppermint-feature-tab-archive-description = Archives tabs you have not used for a while and lets you snooze tabs.
+peppermint-feature-tab-archive-keywords = snooze, old tabs, inactive, later
+
+peppermint-feature-tab-unloader = Tab Unloader
+peppermint-feature-tab-unloader-description = Frees memory by unloading tabs left idle in the background.
+peppermint-feature-tab-unloader-keywords = memory, ram, sleep, discard, performance
+
+peppermint-feature-undo-close = Undo Close
+peppermint-feature-undo-close-description = After tabs close, a toast lets you reopen them with one click.
+peppermint-feature-undo-close-keywords = reopen, restore, closed tabs, undo, mistake
+
+peppermint-feature-tab-close-confirm = Close Confirmation
+peppermint-feature-tab-close-confirm-description = Asks before a tab closes from its close button.
+peppermint-feature-tab-close-confirm-keywords = confirm, warning, accidental close
+
+peppermint-feature-tab-numbers = Tab Numbers
+peppermint-feature-tab-numbers-description = Hold the tab shortcut modifier to see the number that selects each tab.
+peppermint-feature-tab-numbers-keywords = switch tabs, numbers, keyboard
+
+peppermint-feature-tab-search = Tab Search
+peppermint-feature-tab-search-description = Finds open tabs by title and address from the address bar.
+peppermint-feature-tab-search-keywords = find tab, switch to tab, open tabs
+
+peppermint-feature-popular-sites = Popular Site Suggestions
+peppermint-feature-popular-sites-description = Completes the address of well known sites as you type, without a network request.
+peppermint-feature-popular-sites-keywords = autocomplete, domains, suggestions
+
+peppermint-feature-omni-utils = Address Bar Tools
+peppermint-feature-omni-utils-description = Decodes JWTs, converts timestamps and previews colors right in the address bar.
+peppermint-feature-omni-utils-keywords = developer, jwt, timestamp, color, base64, hash, uuid, json
+
+peppermint-feature-url-snippets = URL Snippets
+peppermint-feature-url-snippets-description = Short keywords that open a search or page, such as "yt" for YouTube.
+peppermint-feature-url-snippets-keywords = keywords, bangs, shortcuts, search engines
+
+peppermint-feature-notepad = Notepad
+peppermint-feature-notepad-description = Encrypted Markdown notes, on their own or about the page you are on.
+peppermint-feature-notepad-keywords = notes, markdown, write, memo
+
+peppermint-feature-reader = Reader and Saved Articles
+peppermint-feature-reader-description = Reads articles without clutter and saves them for offline reading.
+peppermint-feature-reader-keywords = read later, offline, article, reader view, saved
+
+peppermint-feature-screenshot-editor = Screenshot Editor
+peppermint-feature-screenshot-editor-description = Adds arrows, boxes, text and redaction to screenshots before you save them.
+peppermint-feature-screenshot-editor-keywords = capture, annotate, markup, image
+
+peppermint-feature-shortcut-sheet = Keyboard Shortcut Sheet
+peppermint-feature-shortcut-sheet-description = Every keyboard shortcut in one searchable sheet. Open lets you change them.
+peppermint-feature-shortcut-sheet-keywords = keys, hotkeys, keybindings, cheat sheet, help
+
+peppermint-feature-report = Peppermint Report
+peppermint-feature-report-description = What Peppermint blocked, unloaded and archived for you this week, month or year.
+peppermint-feature-report-keywords = statistics, stats, summary, blocked trackers
+
+peppermint-feature-homepage = Homepage
+peppermint-feature-homepage-description = A new tab page with your top sites, a clock and your report.
+peppermint-feature-homepage-keywords = new tab, start page, dashboard
+
+peppermint-feature-janitor = Janitor
+peppermint-feature-janitor-description = Clears old temporary files and caches on launch to free disk space.
+peppermint-feature-janitor-keywords = disk space, cleanup, cache, storage, trash
+
+peppermint-feature-underpowered = Underpowered Mode
+peppermint-feature-underpowered-description = Freezes background tabs while the computer is struggling.
+peppermint-feature-underpowered-keywords = battery, slow, cpu, performance, power saving
+
+peppermint-feature-updater = Automatic Updates
+peppermint-feature-updater-description = Checks for new Peppermint versions and installs them when you restart.
+peppermint-feature-updater-keywords = update, version, upgrade

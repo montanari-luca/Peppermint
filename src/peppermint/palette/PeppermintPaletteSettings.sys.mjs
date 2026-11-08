@@ -16,6 +16,8 @@ const ICONS = "chrome://browser/skin/zen-icons/";
  *
  *   peppermint-setting-name-<id>                  its name
  *   peppermint-setting-value-<id>-<choice id>     the name of each choice
+ *   peppermint-setting-keywords-<id>              other words that find it,
+ *                                                 when `keywords` is set
  *
  * A setting without `choices` is a boolean pref and offers whichever of
  * "Enable" and "Disable" is not already the case. One with `choices` offers
@@ -26,16 +28,93 @@ export const SETTINGS = [
   // Privacy and security
   {
     id: "do-not-track",
+    keywords: true,
     pref: "privacy.donottrackheader.enabled",
     icon: "tracking-protection",
   },
   {
     id: "global-privacy-control",
+    keywords: true,
     pref: "privacy.globalprivacycontrol.enabled",
     icon: "tracking-protection",
   },
-  { id: "https-only", pref: "dom.security.https_only_mode", icon: "security" },
-  { id: "popup-blocker", pref: "dom.disable_open_during_load", icon: "popup" },
+  {
+    id: "query-stripping",
+    keywords: true,
+    pref: "privacy.query_stripping.enabled",
+    icon: "tracking-protection",
+  },
+  {
+    id: "clean-links",
+    keywords: true,
+    pref: "peppermint.clean-links.enabled",
+    icon: "tracking-protection",
+  },
+  {
+    id: "fingerprinting-protection",
+    keywords: true,
+    pref: "privacy.fingerprintingProtection",
+    icon: "tracking-protection",
+  },
+  {
+    id: "referrer-trimming",
+    keywords: true,
+    pref: "network.http.referer.XOriginTrimmingPolicy",
+    icon: "security",
+    choices: [
+      { id: "full", value: 0 },
+      { id: "origin", value: 2 },
+    ],
+  },
+  {
+    id: "webrtc-local-addresses",
+    keywords: true,
+    pref: "media.peerconnection.ice.default_address_only",
+    icon: "security",
+  },
+  {
+    id: "lookalike-warning",
+    keywords: true,
+    pref: "peppermint.lookalike.enabled",
+    icon: "security",
+  },
+  {
+    id: "permission-auto-revoke",
+    keywords: true,
+    pref: "peppermint.permissions.auto-revoke.enabled",
+    icon: "permissions",
+  },
+  {
+    id: "auto-revoke-days",
+    keywords: true,
+    pref: "peppermint.permissions.auto-revoke.days",
+    icon: "permissions",
+    requires: "peppermint.permissions.auto-revoke.enabled",
+    choices: [
+      { id: "30", value: 30 },
+      { id: "90", value: 90 },
+      { id: "180", value: 180 },
+      { id: "365", value: 365 },
+    ],
+  },
+  {
+    id: "https-first",
+    keywords: true,
+    pref: "dom.security.https_first",
+    icon: "security",
+  },
+  {
+    id: "https-only",
+    keywords: true,
+    pref: "dom.security.https_only_mode",
+    icon: "security",
+  },
+  {
+    id: "popup-blocker",
+    keywords: true,
+    pref: "dom.disable_open_during_load",
+    icon: "popup",
+  },
   { id: "save-passwords", pref: "signon.rememberSignons", icon: "passwords" },
   {
     id: "autofill-addresses",
@@ -49,6 +128,7 @@ export const SETTINGS = [
   },
   {
     id: "cookie-banner-blocker",
+    keywords: true,
     pref: "zen.cookie-consent.enabled",
     icon: "cookies-fill",
   },
@@ -92,6 +172,11 @@ export const SETTINGS = [
   },
   { id: "warn-closing-tabs", pref: "browser.tabs.warnOnClose", icon: "tab" },
   {
+    id: "undo-close-toast",
+    pref: "peppermint.tabs.undo-close-toast",
+    icon: "tab",
+  },
+  {
     id: "downloads-panel",
     pref: "browser.download.alwaysOpenPanel",
     icon: "downloads",
@@ -110,6 +195,9 @@ export const SETTINGS = [
   },
   { id: "glance", pref: "zen.glance.enabled", icon: "sparkles" },
 ];
+
+const keywordsOf = setting =>
+  setting.keywords ? `peppermint-setting-keywords-${setting.id}` : undefined;
 
 const nameOf = setting => () => ({
   name: formatLabel(`peppermint-setting-name-${setting.id}`),
@@ -158,7 +246,8 @@ function booleanActions(setting) {
         );
       },
       () => isOffered(setting) && readsOn(setting.pref) !== turnOn,
-      nameOf(setting)
+      nameOf(setting),
+      keywordsOf(setting)
     )
   );
 }
@@ -180,7 +269,8 @@ function choiceActions(setting) {
         });
       },
       () => isOffered(setting) && readChoice(setting) !== choice.value,
-      () => ({ name: nameOf(setting)().name, value: choiceName() })
+      () => ({ name: nameOf(setting)().name, value: choiceName() }),
+      keywordsOf(setting)
     );
   });
 }

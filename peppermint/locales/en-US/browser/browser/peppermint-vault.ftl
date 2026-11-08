@@ -217,6 +217,9 @@ peppermint-vault-permissions-reset-confirm =
 peppermint-vault-history-empty-title = No changes recorded yet
 peppermint-vault-history-empty-description = From now on, every time a website permission is allowed, blocked or reset, the change is listed here with the time it happened. Private windows are never recorded.
 peppermint-vault-history-filter-reset = Reset
+peppermint-vault-history-filter-auto-revoked = Removed automatically
+# Shown after a change Peppermint made itself, for example "Allow → Always Ask (unused for a while)".
+peppermint-vault-history-reason-auto-revoked = unused for a while
 peppermint-vault-history-sort-newest = Newest first
 peppermint-vault-history-sort-oldest = Oldest first
 peppermint-vault-history-clear = Clear history

@@ -1,0 +1,27 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Privacy defaults for normal windows. Each one rarely breaks a site.
+#
+# Tracking Protection's "Standard" category expects the default value of the
+# prefs it manages, so changing the default here keeps users on "Standard"
+# (picking "Standard" again restores these values, not Firefox's).
+
+# Strip known tracking parameters (utm_*, fbclid, ...) from navigations.
+- name: privacy.query_stripping.enabled
+  value: true
+
+# Firefox's fingerprinting protection, with its built-in site exceptions.
+# The stricter privacy.resistFingerprinting stays off.
+- name: privacy.fingerprintingProtection
+  value: true
+
+# Cross-site requests send only the origin as the referrer, never the path.
+- name: network.http.referer.XOriginTrimmingPolicy
+  value: 2
+
+# WebRTC only uses the default route, so sites cannot read local network
+# addresses. Calls still connect.
+- name: media.peerconnection.ice.default_address_only
+  value: true

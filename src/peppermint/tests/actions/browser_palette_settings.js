@@ -118,3 +118,23 @@ add_task(async function test_locked_setting_is_not_offered() {
   }
   await SpecialPowers.popPrefEnv();
 });
+
+add_task(function test_settings_with_keywords_are_translated() {
+  registerPeppermintActions();
+  for (const setting of SETTINGS.filter(candidate => candidate.keywords)) {
+    for (const entry of settingActions(setting)) {
+      ok(entry.keywords.length, `${entry.commandId} has keywords`);
+      ok(
+        !entry.keywords.includes("peppermint-"),
+        `${entry.commandId} keywords are translated`
+      );
+    }
+  }
+  const off = byId("peppermint:setting-query-stripping-off");
+  ok(off.keywords.includes("utm"), "Tracking parameter keywords include utm");
+  Assert.equal(
+    byId("peppermint:setting-popular-sites-off").keywords,
+    "",
+    "A setting without keywords has none"
+  );
+});

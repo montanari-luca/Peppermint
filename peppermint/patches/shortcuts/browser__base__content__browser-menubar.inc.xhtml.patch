@@ -10,7 +10,7 @@
  #endif
      </menupopup>
    </menu>
-@@ -399,7 +400,8 @@
+@@ -403,7 +404,8 @@
  #ifndef XP_UNIX
        <menuseparator id="prefSep"/>
        <menuitem id="menu_preferences"
@@ -20,3 +20,15 @@
  #endif
  #ifdef MOZ_DEBUG
        <menuitem id="menu_layout_debugger"
+@@ -435,6 +437,11 @@
+                 data-l10n-id="menu-get-help"
+                 appmenu-data-l10n-id="appmenu-get-help"
+                 />
++      <menuitem id="menu_peppermintShortcutSheet"
++                data-l10n-id="peppermint-menu-shortcut-sheet"
++                appmenu-data-l10n-id="peppermint-appmenu-shortcut-sheet"
++                key="key_peppermintShortcutSheet"
++                command="cmd_peppermintShortcutSheet"/>
+       <menuitem id="help_reportBrokenSite"
+                 command="cmd_reportBrokenSite"
+                 data-l10n-id="menu-report-broken-site"

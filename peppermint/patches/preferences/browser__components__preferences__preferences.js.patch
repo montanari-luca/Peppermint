@@ -9,7 +9,7 @@
      module: "chrome://browser/content/preferences/config/about-firefox.mjs",
      visible: () => srdSectionPrefs.all,
    },
-@@ -569,9 +569,15 @@
+@@ -569,9 +569,16 @@
    }
    register_module("paneSearch", gSearchPane);
    register_module("panePrivacy", gPrivacyPane);
@@ -25,6 +25,7 @@
 +  register_module("paneZenPerformance", gZenPerformanceSettings);
 +  register_module("paneZenJanitor", gZenJanitorSettings);
 +  register_module("paneZenGhostMode", gZenGhostModeSettings);
++  register_module("paneZenPeppermint", gPeppermintFeaturesPane);
  
    // Restore the cached Firefox Labs nav button visibility so it shows
    // immediately when recipes are expected to be available, before

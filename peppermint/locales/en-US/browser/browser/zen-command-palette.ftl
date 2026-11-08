@@ -29,6 +29,15 @@ peppermint-setting-was-set = { $name } set to { $value }
 
 peppermint-setting-name-do-not-track = Do Not Track Request
 peppermint-setting-name-global-privacy-control = Global Privacy Control
+peppermint-setting-name-query-stripping = Tracking Parameter Removal
+peppermint-setting-name-clean-links = Clean Links (Skip Click Trackers)
+peppermint-setting-name-fingerprinting-protection = Fingerprinting Protection
+peppermint-setting-name-referrer-trimming = Referrer Sent to Other Sites
+peppermint-setting-name-webrtc-local-addresses = Hide Local IP Addresses from WebRTC
+peppermint-setting-name-lookalike-warning = Lookalike Site Warning
+peppermint-setting-name-permission-auto-revoke = Remove Permissions from Unused Sites
+peppermint-setting-name-auto-revoke-days = Unused Site Permissions Removed After
+peppermint-setting-name-https-first = HTTPS-First Mode
 peppermint-setting-name-https-only = HTTPS-Only Mode
 peppermint-setting-name-popup-blocker = Pop-up Blocker
 peppermint-setting-name-save-passwords = Ask to Save Passwords
@@ -42,6 +51,7 @@ peppermint-setting-name-suggest-top-sites = Top Site Suggestions
 peppermint-setting-name-popular-sites = Popular Site Suggestions
 peppermint-setting-name-startup-page = Startup Page
 peppermint-setting-name-warn-closing-tabs = Warning When Closing Several Tabs
+peppermint-setting-name-undo-close-toast = Undo Toast After Closing Tabs
 peppermint-setting-name-downloads-panel = Downloads Panel When a Download Starts
 peppermint-setting-name-smooth-scrolling = Smooth Scrolling
 peppermint-setting-name-autoscroll = Autoscrolling
@@ -51,6 +61,30 @@ peppermint-setting-name-glance = Glance
 
 peppermint-setting-value-startup-page-homepage = Open Homepage
 peppermint-setting-value-startup-page-previous-session = Restore Previous Session
+peppermint-setting-value-referrer-trimming-full = Full Address
+peppermint-setting-value-referrer-trimming-origin = Site Only
+peppermint-setting-value-auto-revoke-days-30 = 30 Days
+peppermint-setting-value-auto-revoke-days-90 = 90 Days
+peppermint-setting-value-auto-revoke-days-180 = 180 Days
+peppermint-setting-value-auto-revoke-days-365 = 1 Year
+
+## Other words that find a setting in the palette, separated by commas.
+## They are never shown.
+
+peppermint-setting-keywords-do-not-track = dnt, tracking, privacy
+peppermint-setting-keywords-global-privacy-control = gpc, do not sell, tracking, privacy
+peppermint-setting-keywords-query-stripping = clean links, utm, fbclid, tracking
+peppermint-setting-keywords-clean-links = redirect, amp, click tracking, outbound links
+peppermint-setting-keywords-fingerprinting-protection = fingerprint, tracking, privacy
+peppermint-setting-keywords-referrer-trimming = referer, referrer, privacy
+peppermint-setting-keywords-webrtc-local-addresses = ip leak, webrtc, local ip, privacy
+peppermint-setting-keywords-lookalike-warning = phishing, scam, fake site, typo, punycode
+peppermint-setting-keywords-permission-auto-revoke = camera, microphone, location, notifications, revoke, expire, privacy
+peppermint-setting-keywords-auto-revoke-days = camera, microphone, location, notifications, revoke, expire, days
+peppermint-setting-keywords-https-first = ssl, tls, secure, encryption
+peppermint-setting-keywords-https-only = ssl, tls, secure, encryption
+peppermint-setting-keywords-popup-blocker = popups, windows, ads
+peppermint-setting-keywords-cookie-banner-blocker = cookies, consent, gdpr, banner
 
 # Sites. Each permission in PeppermintPaletteSite.sys.mjs needs a name.
 peppermint-permission-name-camera = Camera

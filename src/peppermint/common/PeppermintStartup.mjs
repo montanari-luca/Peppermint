@@ -40,6 +40,11 @@ export const PeppermintStartup = {
         "resource:///modules/zen/ZenTabUnloader.sys.mjs"
       ).ZenTabUnloader.start()
     );
+    start("PeppermintCleanLinks", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/clean-links/PeppermintCleanLinks.sys.mjs"
+      ).PeppermintCleanLinks.start()
+    );
     start("Peppermint actions", () =>
       ChromeUtils.importESModule(
         "moz-src:///peppermint/common/PeppermintActions.sys.mjs"
@@ -132,6 +137,16 @@ export const PeppermintStartup = {
         "moz-src:///peppermint/tab-islands/PeppermintTabIslands.sys.mjs"
       ).PeppermintTabIslands.init(window)
     );
+    start("PeppermintUndoClose", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/undo-close/PeppermintUndoClose.sys.mjs"
+      ).PeppermintUndoClose.init(window)
+    );
+    start("PeppermintShortcutSheet", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/shortcut-sheet/PeppermintShortcutSheet.sys.mjs"
+      ).PeppermintShortcutSheet.init(window)
+    );
     start("PeppermintShortcutTooltips", () =>
       ChromeUtils.importESModule(
         "moz-src:///peppermint/shortcut-tooltips/PeppermintShortcutTooltips.sys.mjs"
@@ -146,6 +161,16 @@ export const PeppermintStartup = {
       ChromeUtils.importESModule(
         "moz-src:///peppermint/vault/PeppermintVault.sys.mjs"
       ).PeppermintVault.init(window)
+    );
+    start("PeppermintLookalike", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/lookalike/PeppermintLookalike.sys.mjs"
+      ).PeppermintLookalike.init(window)
+    );
+    start("PeppermintPermissionAutoRevoke", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/vault/PeppermintPermissionAutoRevoke.sys.mjs"
+      ).PeppermintPermissionAutoRevoke.start()
     );
   },
 };

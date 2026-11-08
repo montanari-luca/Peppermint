@@ -12,6 +12,13 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   SitePermissions: "resource:///modules/SitePermissions.sys.mjs",
 });
+ChromeUtils.defineLazyGetter(lazy, "l10n", () => {
+  return new Localization(["browser/peppermint-vault.ftl"]);
+});
+
+const REASON_L10N_IDS = {
+  "auto-revoked": "peppermint-vault-history-reason-auto-revoked",
+};
 
 const TYPE_FILTERS = {
   location: "geo",
@@ -254,19 +261,23 @@ function describeChange(entry) {
   return `${label(entry.from)} → ${label(entry.to)}`;
 }
 
-function toHistoryItem(entry, seq) {
+function toHistoryItem(entry, seq, reasons) {
+  const reason = reasons.get(entry.reason);
   return {
     id: entry.id,
     ...siteOf(entry.origin),
     insecure: false,
     values: {
       permission: typeLabel(entry.type),
-      change: describeChange(entry),
+      change: reason
+        ? `${describeChange(entry)} (${reason})`
+        : describeChange(entry),
     },
     secrets: {},
     lastUsed: entry.time,
     changed: entry.time,
     to: entry.to,
+    reason: entry.reason ?? null,
     seq,
     timestamps: [{ kind: "event", time: entry.time }],
   };
@@ -277,6 +288,7 @@ const HISTORY_FILTERS = {
   allowed: item => item.to == lazy.SitePermissions.ALLOW,
   blocked: item => item.to == lazy.SitePermissions.BLOCK,
   reset: item => item.to === null,
+  "auto-revoked": item => item.reason == "auto-revoked",
 };
 
 const HISTORY_SORTS = {
@@ -325,6 +337,10 @@ export const PermissionHistorySection = {
     { id: "allowed", l10nId: "peppermint-vault-permissions-filter-allowed" },
     { id: "blocked", l10nId: "peppermint-vault-permissions-filter-blocked" },
     { id: "reset", l10nId: "peppermint-vault-history-filter-reset" },
+    {
+      id: "auto-revoked",
+      l10nId: "peppermint-vault-history-filter-auto-revoked",
+    },
   ],
   sorts: [
     { id: "recent-change", l10nId: "peppermint-vault-history-sort-newest" },
@@ -337,9 +353,19 @@ export const PermissionHistorySection = {
   async list({ query = "", filter = "all", sort = "recent-change" } = {}) {
     const needle = query.trim().toLowerCase();
     const matchesFilter = HISTORY_FILTERS[filter] ?? HISTORY_FILTERS.all;
-    return (await PeppermintVaultPermissionLog.entries())
-      .filter(entry => lazy.SitePermissions.isSitePermission(entry.type))
-      .map(toHistoryItem)
+    const entries = (await PeppermintVaultPermissionLog.entries()).filter(
+      entry => lazy.SitePermissions.isSitePermission(entry.type)
+    );
+    const reasons = new Map();
+    const shownReasons = [
+      ...new Set(entries.map(entry => entry.reason).filter(Boolean)),
+    ].filter(reason => REASON_L10N_IDS[reason]);
+    const labels = await lazy.l10n.formatValues(
+      shownReasons.map(reason => REASON_L10N_IDS[reason])
+    );
+    shownReasons.forEach((reason, i) => reasons.set(reason, labels[i]));
+    return entries
+      .map((entry, seq) => toHistoryItem(entry, seq, reasons))
       .filter(
         item =>
           matchesFilter(item) &&

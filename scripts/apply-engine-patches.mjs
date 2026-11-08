@@ -82,7 +82,27 @@ let failed = 0;
 // A patch whose reverse applies cleanly is already in the engine. Forward
 // matching alone can re-apply a hunk that inserts a block next to identical
 // context, duplicating it.
+const GIT_APPLY_ARGS = ["--ignore-space-change", "--ignore-whitespace"];
+
+function gitApplies(patchPath, reverse) {
+  const result = spawnSync(
+    "git",
+    ["apply", "--check", ...(reverse ? ["-R"] : []), ...GIT_APPLY_ARGS, patchPath],
+    { cwd: engineDir, encoding: "utf8" },
+  );
+  return result.status === 0;
+}
+
+// GNU patch cannot read git binary hunks, so it never sees a patch with one as
+// applied and re-applies its text hunks on every import (duplicating any
+// insertion whose context still matches). git apply is asked first.
 function isApplied(patchPath) {
+  if (gitApplies(patchPath, true)) {
+    return true;
+  }
+  if (/^GIT binary patch$/m.test(fs.readFileSync(patchPath, "utf8"))) {
+    return false;
+  }
   const result = spawnSync(
     patchExe,
     ["-p1", "-R", "--batch", "--dry-run", "-i", patchPath],
@@ -97,10 +117,13 @@ for (const patchPath of patches) {
     skipped++;
     continue;
   }
+  const binary = /^GIT binary patch$/m.test(fs.readFileSync(patchPath, "utf8"));
   try {
     execFileSync(
-      patchExe,
-      ["-p1", "--forward", "--batch", "-i", patchPath],
+      binary ? "git" : patchExe,
+      binary
+        ? ["apply", ...GIT_APPLY_ARGS, patchPath]
+        : ["-p1", "--forward", "--batch", "-i", patchPath],
       {
         cwd: engineDir,
         encoding: "utf8",

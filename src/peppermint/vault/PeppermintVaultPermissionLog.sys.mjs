@@ -49,14 +49,16 @@ function keyOf(permission) {
  * added with the time they were last modified. Nothing from private windows
  * is recorded, and clearing site settings from the browser clears the record.
  *
- * Each entry is { id, time, origin, type, from, to, seeded? } where from and
- * to are permission states, or null when the permission did not exist (before)
- * or was removed (after).
+ * Each entry is { id, time, origin, type, from, to, seeded?, reason? } where
+ * from and to are permission states, or null when the permission did not
+ * exist (before) or was removed (after). `reason` says why Peppermint made
+ * the change itself, for example "auto-revoked".
  */
 class PermissionLog {
   #file = null;
   #ready = null;
   #known = new Map();
+  #reasons = new Map();
   #path = null;
 
   start() {
@@ -76,7 +78,21 @@ class PermissionLog {
     this.#ready = null;
     this.#file = null;
     this.#known.clear();
+    this.#reasons.clear();
     file?.finalize().catch(console.error);
+  }
+
+  /**
+   * Records why the next change to `permission` happens. Call it right before
+   * making the change.
+   *
+   * @param {nsIPermission} permission
+   * @param {string} reason
+   */
+  noteReason(permission, reason) {
+    if (this.#ready) {
+      this.#reasons.set(keyOf(permission), reason);
+    }
   }
 
   async #load() {
@@ -126,7 +142,7 @@ class PermissionLog {
     }
   }
 
-  async #record(topic, data, permission) {
+  async #record(topic, data, permission, reason) {
     await this.#ready;
     const file = this.#file;
     if (!file) {
@@ -161,6 +177,7 @@ class PermissionLog {
       type: permission.type,
       from,
       to,
+      ...(reason && { reason }),
     });
     const limit = Math.max(
       1,
@@ -174,14 +191,19 @@ class PermissionLog {
 
   observe(subject, topic, data) {
     let permission = null;
+    let reason;
     if (data != "cleared") {
       try {
         permission = subject.QueryInterface(Ci.nsIPermission);
       } catch {
         return;
       }
+      // Read now: a change made before this one may still be waiting below.
+      const key = keyOf(permission);
+      reason = this.#reasons.get(key);
+      this.#reasons.delete(key);
     }
-    this.#record(topic, data, permission).catch(console.error);
+    this.#record(topic, data, permission, reason).catch(console.error);
   }
 
   QueryInterface = ChromeUtils.generateQI([

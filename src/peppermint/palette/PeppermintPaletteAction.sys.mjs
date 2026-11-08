@@ -43,6 +43,8 @@ export function formatLabel(labelId, args) {
  * @param {object|Function} [labelArgs] - Fluent arguments of the label, or a
  *   function returning them (for arguments that are text in the current
  *   language)
+ * @param {string} [keywordsId] - Fluent message listing other words that
+ *   find the entry, separated by commas
  * @returns {object}
  */
 export function action(
@@ -51,7 +53,8 @@ export function action(
   icon,
   command,
   isAvailable = () => true,
-  labelArgs = undefined
+  labelArgs = undefined,
+  keywordsId = undefined
 ) {
   return {
     commandId: `peppermint:${id}`,
@@ -64,6 +67,9 @@ export function action(
         labelId,
         typeof labelArgs == "function" ? labelArgs() : labelArgs
       );
+    },
+    get keywords() {
+      return keywordsId ? formatLabel(keywordsId) : "";
     },
   };
 }
