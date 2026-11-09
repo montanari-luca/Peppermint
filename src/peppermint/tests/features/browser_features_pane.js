@@ -126,12 +126,39 @@ add_task(async function test_search_matches_keywords() {
   // "ublock" appears only in the ad blocker's keywords.
   await search(win, "ublock");
   ok(
-    BrowserTestUtils.isVisible(doc.getElementById("peppermintFeatures-privacy")),
+    BrowserTestUtils.isVisible(
+      doc.getElementById("peppermintFeatures-privacy")
+    ),
     "The group with the ad blocker is a result"
   );
   ok(
     !BrowserTestUtils.isVisible(doc.getElementById("peppermintFeatures-tools")),
     "Other feature groups are not"
   );
+  BrowserTestUtils.removeTab(tab);
+});
+
+add_task(async function test_settings_nav_keeps_its_names() {
+  const { tab, win, doc } = await openPane();
+  const button = doc.getElementById("category-zen-peppermint");
+  await button.updateComplete;
+  const label = button.shadowRoot.querySelector("slot:not([name])");
+  const shown = () => win.getComputedStyle(label).display != "none";
+  const { outerWidth, outerHeight } = window;
+  const resizeTo = async width => {
+    const resized = BrowserTestUtils.waitForEvent(win, "resize");
+    window.resizeTo(width, outerHeight);
+    await resized;
+  };
+
+  // Firefox shows only icons below 950px.
+  await resizeTo(900);
+  Assert.less(win.innerWidth, 950, "Narrower than Firefox's limit");
+  ok(shown(), "The category names stay at a usual settings width");
+
+  await resizeTo(500);
+  ok(!shown(), "Only icons when there is no room for the names");
+
+  await resizeTo(outerWidth);
   BrowserTestUtils.removeTab(tab);
 });

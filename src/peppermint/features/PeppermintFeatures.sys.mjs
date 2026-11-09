@@ -249,7 +249,7 @@ export const FEATURES = [
   {
     id: "startup-doctor",
     category: "system",
-    icon: "rocket.svg",
+    icon: "bolt.svg",
     pref: "peppermint.startup-doctor.enabled",
     url: "about:report",
     added: 2,

@@ -88,7 +88,7 @@ export const SETTINGS = [
     id: "startup-doctor",
     keywords: true,
     pref: "peppermint.startup-doctor.enabled",
-    icon: "rocket",
+    icon: "bolt",
   },
   {
     id: "feature-tour",

@@ -122,6 +122,11 @@ add_task(async function test_update_toast_opens_the_pane() {
     "The button has a written label"
   );
 
+  // Settings would replace a blank tab instead of opening its own.
+  const page = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    "https://example.com/"
+  );
   const opened = BrowserTestUtils.waitForNewTab(
     gBrowser,
     url => url.startsWith("about:preferences"),
@@ -152,6 +157,7 @@ add_task(async function test_update_toast_opens_the_pane() {
     "Showing the pane counts the features as seen"
   );
   BrowserTestUtils.removeTab(tab);
+  BrowserTestUtils.removeTab(page);
 
   const again = await BrowserTestUtils.openNewForegroundTab(
     gBrowser,

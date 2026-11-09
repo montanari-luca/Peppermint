@@ -18,7 +18,24 @@
    color: light-dark(black, white);
  }
  
-@@ -85,10 +85,18 @@
+@@ -65,6 +65,16 @@
+   padding-inline: 20px !important;
+ }
+ 
++/* Firefox shows only icons below 950px, which settings windows often are;
++   keep the names until there is no room for them. */
++#categories {
++  --page-nav-collapsed: expanded;
++
++  @media (max-width: 640px) {
++    --page-nav-collapsed: collapsed;
++  }
++}
++
+ .textbox-search-sign {
+   margin-right: 15px;
+ }
+@@ -85,10 +95,18 @@
    margin-bottom: 15px;
  }
  
@@ -38,7 +55,7 @@
  #zenLooksAndFeelGroup > html|div:last-of-type {
    margin-top: 15px;
  }
-@@ -99,7 +107,7 @@
+@@ -99,7 +117,7 @@
    display: flex;
    border-radius: 10px;
    border: 1px solid var(--zen-colors-border);
@@ -47,7 +64,7 @@
    position: relative;
    --zen-compact-mode-styles-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.1);
  
-@@ -136,12 +144,6 @@
+@@ -136,12 +154,6 @@
    }
  }
  
@@ -60,14 +77,14 @@
  #zenTabsUnloadDelayContainer {
    display: flex;
    align-items: center;
-@@ -154,7 +156,29 @@
+@@ -154,9 +166,31 @@
  /* CKS */
  
  #category-zen-CKS > .category-icon {
 -  list-style-image: url("chrome://browser/skin/quickactions.svg");
 +  list-style-image: url("chrome://browser/skin/zen-icons/brackets-curly.svg");
-+}
-+
+ }
+ 
 +#category-zen-adblock > .category-icon {
 +  list-style-image: url("chrome://browser/skin/zen-icons/tracking-protection-fill.svg");
 +}
@@ -88,10 +105,12 @@
 +#category-zen-marketplace,
 +moz-page-nav-button[view="paneZenMarketplace"] {
 +  display: none !important;
- }
- 
++}
++
  /* Theme builder */
-@@ -164,7 +188,7 @@
+ 
+ #zen-theme-builder {
+@@ -164,7 +198,7 @@
    flex-direction: column;
    justify-content: center;
    padding: 15px;
@@ -100,7 +119,7 @@
    border-radius: 10px;
    margin-bottom: 10px;
  }
-@@ -192,7 +216,12 @@
+@@ -192,7 +226,12 @@
    border-radius: 10px;
    margin: 10px;
    background: light-dark(rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.3));
@@ -114,10 +133,12 @@
    border: 2px solid light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
  }
  
-@@ -208,165 +237,6 @@
+@@ -206,167 +245,8 @@
+   border-radius: 50px;
+   background: var(--zen-primary-color);
    transform: translate(-50%, -50%);
- }
- 
+-}
+-
 -/* THemes marketplace */
 -
 -#category-zen-marketplace > .category-icon {
@@ -218,8 +239,8 @@
 -  display: grid;
 -  gap: var(--space-medium);
 -  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
--}
--
+ }
+ 
 -#zenThemeMarketplaceList:has(> *) {
 -  margin: 15px 0;
 -}
@@ -280,7 +301,7 @@
  #zenLayoutList {
    display: flex;
    flex-wrap: wrap;
-@@ -406,8 +276,8 @@
+@@ -406,8 +286,8 @@
  /* Disable mozilla's settings */
  
  #dataCollectionCategory,
@@ -290,7 +311,7 @@
  #websiteAdvertisingGroup,
  #helpButton,
  #support-firefox,
-@@ -425,14 +295,116 @@
+@@ -425,14 +305,116 @@
    list-style-image: url("chrome://devtools/skin/images/tool-storage.svg");
  }
  
