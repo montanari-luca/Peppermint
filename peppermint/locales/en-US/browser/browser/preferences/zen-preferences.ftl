@@ -537,6 +537,10 @@ peppermint-feature-clean-links = Clean Links
 peppermint-feature-clean-links-description = Skips click trackers and AMP pages and goes straight to where a link leads.
 peppermint-feature-clean-links-keywords = redirect, click tracking, amp, outbound links, google url, unwrap
 
+peppermint-feature-site-privacy = Site Privacy and Forget This Site
+peppermint-feature-site-privacy-description = Shows blocked trackers and stored data in the site panel, and forgets a site in two clicks.
+peppermint-feature-site-privacy-keywords = cookies, storage, site data, clear, delete, forget, trackers, identity
+
 peppermint-feature-lookalike-warning = Lookalike Site Warning
 peppermint-feature-lookalike-warning-description = Warns you when a site you have never visited uses a name made to look like a popular one.
 peppermint-feature-lookalike-warning-keywords = phishing, scam, fake, typo, punycode, homograph, impersonation

@@ -162,6 +162,11 @@ export const PeppermintStartup = {
         "moz-src:///peppermint/vault/PeppermintVault.sys.mjs"
       ).PeppermintVault.init(window)
     );
+    start("PeppermintSitePrivacy", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/site-privacy/PeppermintSitePrivacy.sys.mjs"
+      ).PeppermintSitePrivacy.init(window)
+    );
     start("PeppermintLookalike", () =>
       ChromeUtils.importESModule(
         "moz-src:///peppermint/lookalike/PeppermintLookalike.sys.mjs"

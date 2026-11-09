@@ -25,6 +25,7 @@ BROWSER_CHROME_MANIFESTS += [
     "screenshot_editor/browser.toml",
     "shortcut_sheet/browser.toml",
     "shortcut_tooltips/browser.toml",
+    "site_privacy/browser.toml",
     "tab_archive/browser.toml",
     "tab_close_confirm/browser.toml",
     "tab_islands/browser.toml",

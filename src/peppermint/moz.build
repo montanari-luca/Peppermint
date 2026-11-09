@@ -24,6 +24,7 @@ DIRS += [
     "screenshot-editor",
     "shortcut-sheet",
     "shortcut-tooltips",
+    "site-privacy",
     "tab-archive",
     "tab-close-confirm",
     "tab-islands",

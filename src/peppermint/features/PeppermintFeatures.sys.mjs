@@ -52,6 +52,12 @@ export const FEATURES = [
     pref: "peppermint.clean-links.enabled",
   },
   {
+    id: "site-privacy",
+    category: "privacy",
+    icon: "forget.svg",
+    pref: "peppermint.site-privacy.enabled",
+  },
+  {
     id: "lookalike-warning",
     category: "privacy",
     icon: "security-warning.svg",

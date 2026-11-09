@@ -73,6 +73,12 @@ export const SETTINGS = [
     icon: "security",
   },
   {
+    id: "site-privacy",
+    keywords: true,
+    pref: "peppermint.site-privacy.enabled",
+    icon: "security",
+  },
+  {
     id: "lookalike-warning",
     keywords: true,
     pref: "peppermint.lookalike.enabled",
