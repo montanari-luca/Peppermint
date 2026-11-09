@@ -91,6 +91,12 @@ export const SETTINGS = [
     icon: "rocket",
   },
   {
+    id: "feature-tour",
+    keywords: true,
+    pref: "peppermint.features.tour.enabled",
+    icon: "sparkles",
+  },
+  {
     id: "permission-auto-revoke",
     keywords: true,
     pref: "peppermint.permissions.auto-revoke.enabled",

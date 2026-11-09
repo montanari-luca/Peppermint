@@ -11,6 +11,7 @@ DIRS += [
     "clean-links",
     "common",
     "cookie-consent",
+    "feature-tour",
     "features",
     "ghost-mode",
     "homepage",

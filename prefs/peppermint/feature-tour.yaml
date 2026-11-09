@@ -1,0 +1,17 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Show one toast pointing at the features pane after Zen's welcome and after
+# updates that add features.
+- name: peppermint.features.tour.enabled
+  value: true
+
+# The newest feature generation (GENERATION in PeppermintFeatures) the user
+# has seen in the features pane; newer features are marked "New" there.
+- name: peppermint.features.seen
+  value: 1
+
+# The newest feature generation the tour has announced.
+- name: peppermint.features.announced
+  value: 1

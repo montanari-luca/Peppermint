@@ -23,7 +23,14 @@
  *   command   id of the <command> its keyboard shortcut runs (optional)
  *   startup   the name PeppermintStartup starts it under, so the startup
  *             doctor can offer to turn a slow one off (optional)
+ *   added     the feature generation it arrived in (see GENERATION); missing
+ *             means 1, the features Peppermint had before the feature tour
  */
+
+// Raise this when a release adds features, and give those features
+// `added: GENERATION`. The feature tour then announces them once, and the
+// features pane marks them "New" until it has been opened.
+export const GENERATION = 2;
 
 export const CATEGORIES = ["privacy", "tabs", "address-bar", "tools", "system"];
 
@@ -47,6 +54,7 @@ export const FEATURES = [
     category: "privacy",
     icon: "link.svg",
     pref: "privacy.query_stripping.enabled",
+    added: 2,
   },
   {
     id: "clean-links",
@@ -54,6 +62,7 @@ export const FEATURES = [
     icon: "link.svg",
     pref: "peppermint.clean-links.enabled",
     startup: "PeppermintCleanLinks",
+    added: 2,
   },
   {
     id: "site-privacy",
@@ -61,6 +70,7 @@ export const FEATURES = [
     icon: "forget.svg",
     pref: "peppermint.site-privacy.enabled",
     startup: "PeppermintSitePrivacy",
+    added: 2,
   },
   {
     id: "lookalike-warning",
@@ -68,6 +78,7 @@ export const FEATURES = [
     icon: "security-warning.svg",
     pref: "peppermint.lookalike.enabled",
     startup: "PeppermintLookalike",
+    added: 2,
   },
   {
     id: "permission-auto-revoke",
@@ -75,12 +86,14 @@ export const FEATURES = [
     icon: "permissions.svg",
     pref: "peppermint.permissions.auto-revoke.enabled",
     startup: "PeppermintPermissionAutoRevoke",
+    added: 2,
   },
   {
     id: "fingerprinting-protection",
     category: "privacy",
     icon: "tracking-protection.svg",
     pref: "privacy.fingerprintingProtection",
+    added: 2,
   },
   {
     id: "ghost-mode",
@@ -127,6 +140,7 @@ export const FEATURES = [
     icon: "arrow-rotate-anticlockwise.svg",
     pref: "peppermint.tabs.undo-close-toast",
     startup: "PeppermintUndoClose",
+    added: 2,
   },
   {
     id: "tab-close-confirm",
@@ -200,6 +214,7 @@ export const FEATURES = [
     url: "about:keyboard",
     command: "cmd_peppermintShortcutSheet",
     startup: "PeppermintShortcutSheet",
+    added: 2,
   },
   {
     id: "report",
@@ -237,6 +252,7 @@ export const FEATURES = [
     icon: "rocket.svg",
     pref: "peppermint.startup-doctor.enabled",
     url: "about:report",
+    added: 2,
   },
   {
     id: "updater",
@@ -259,4 +275,20 @@ export function featureL10nIds(feature) {
     description: `${base}-description`,
     keywords: `${base}-keywords`,
   };
+}
+
+/**
+ * @param {object} feature - An entry of FEATURES
+ * @returns {number} The generation it arrived in
+ */
+export function addedIn(feature) {
+  return feature.added ?? 1;
+}
+
+/**
+ * @param {number} seen - The newest generation the user has seen
+ * @returns {object[]} The features that arrived after it
+ */
+export function newFeatures(seen) {
+  return FEATURES.filter(feature => addedIn(feature) > seen);
 }

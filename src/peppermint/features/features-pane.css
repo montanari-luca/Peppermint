@@ -30,6 +30,22 @@
   grid-column: 2;
 }
 
+.peppermint-feature-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-small);
+}
+
+.peppermint-feature-new {
+  padding: 0 6px;
+  border-radius: var(--border-radius-small);
+  background: color-mix(in srgb, var(--zen-primary-color) 30%, transparent);
+  color: inherit;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .peppermint-feature-name {
   margin: 0;
   font-size: 1em;

@@ -19,6 +19,12 @@ var gPeppermintFeaturesPane = {
     this._registry = ChromeUtils.importESModule(
       "moz-src:///peppermint/features/PeppermintFeatures.sys.mjs"
     );
+    this._tour = ChromeUtils.importESModule(
+      "moz-src:///peppermint/feature-tour/PeppermintFeatureTour.sys.mjs"
+    );
+    // Read once: features stay marked "New" while the pane is open, even
+    // after showing it counts them as seen.
+    this._seen = Services.prefs.getIntPref(this._tour.PREFS.seen, 1);
     for (const feature of this._registry.FEATURES) {
       const group = document.getElementById(
         `peppermintFeatures-${feature.category}`
@@ -30,6 +36,7 @@ var gPeppermintFeaturesPane = {
     document.addEventListener("paneshown", event => {
       if (event.detail.category == "paneZenPeppermint") {
         this._refreshShortcuts();
+        this._tour.markFeaturesSeen();
       }
     });
     window.addEventListener("unload", () => this._uninit(), { once: true });
@@ -78,7 +85,16 @@ var gPeppermintFeaturesPane = {
     const description = document.createElement("p");
     description.className = "peppermint-feature-description";
     document.l10n.setAttributes(description, ids.description);
-    text.append(name, description);
+    const title = document.createElement("div");
+    title.className = "peppermint-feature-title";
+    title.append(name);
+    if (this._registry.addedIn(feature) > this._seen) {
+      const badge = document.createElement("span");
+      badge.className = "peppermint-feature-new";
+      document.l10n.setAttributes(badge, "peppermint-features-new");
+      title.append(badge);
+    }
+    text.append(title, description);
     row.append(icon, text);
 
     if (feature.command) {

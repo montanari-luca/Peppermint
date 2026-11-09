@@ -520,6 +520,8 @@ peppermint-features-open =
     .label = Open
 peppermint-features-options =
     .label = Options
+# Marks a feature added since the pane was last opened.
+peppermint-features-new = New
 
 peppermint-feature-ad-blocker = Ad Blocker
 peppermint-feature-ad-blocker-description = Blocks ads and trackers with the blocker you pick.

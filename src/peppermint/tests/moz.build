@@ -9,6 +9,7 @@ BROWSER_CHROME_MANIFESTS += [
     "adblocker/browser.toml",
     "clean_links/browser.toml",
     "cookie_consent/browser.toml",
+    "feature_tour/browser.toml",
     "features/browser.toml",
     "ghost_mode/browser.toml",
     "homepage/browser.toml",

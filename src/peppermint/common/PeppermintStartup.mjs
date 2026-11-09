@@ -184,6 +184,11 @@ export const PeppermintStartup = {
         "moz-src:///peppermint/vault/PeppermintPermissionAutoRevoke.sys.mjs"
       ).PeppermintPermissionAutoRevoke.start()
     );
+    start("PeppermintFeatureTour", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/feature-tour/PeppermintFeatureTour.sys.mjs"
+      ).PeppermintFeatureTour.init(window)
+    );
     start("PeppermintStartupDoctor", () =>
       lazy.PeppermintStartupDoctor.firstWindowReady()
     );
