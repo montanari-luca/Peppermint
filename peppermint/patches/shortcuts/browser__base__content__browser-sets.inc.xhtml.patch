@@ -1,6 +1,17 @@
 --- a/browser/base/content/browser-sets.inc.xhtml
 +++ b/browser/base/content/browser-sets.inc.xhtml
-@@ -420,6 +420,12 @@
+@@ -135,6 +135,10 @@
+     <command id="splitViewCmd_reverseTabs"/>
+     <command id="splitViewCmd_closeTabs"/>
+   </commandset>
++  <!-- Peppermint: handled by the module of each command (PeppermintStartup). -->
++  <commandset id="peppermintCommandSet">
++    <command id="cmd_peppermintShortcutSheet"/>
++  </commandset>
+ 
+   <keyset id="mainKeyset">
+     <key id="key_newNavigator"
+@@ -408,7 +412,17 @@
      <key id="key_hideOtherAppsCmdMac"
           data-l10n-id="hide-other-apps-shortcut"
           modifiers="accel,alt"
@@ -12,4 +23,9 @@
 +         command="menu_preferences"
           internal="true"/>
  #endif
++    <key id="key_peppermintShortcutSheet"
++         key="/"
++         modifiers="accel"
++         command="cmd_peppermintShortcutSheet"/>
    </keyset>
+ #include zen-keysets.inc.xhtml

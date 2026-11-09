@@ -1,5 +1,7 @@
 src/browser/base/content/browser-commands-js.patch
 src/browser/base/content/browser-sets-inc-xhtml.patch
+src/browser/components/contextualidentity/content/ContainerCreationPanel-mjs.patch
+src/browser/components/customizableui/ToolbarContextMenu-sys-mjs.patch
 src/browser/components/migration/ChromeMigrationUtils-sys-mjs.patch
 src/browser/components/migration/MigrationUtils-sys-mjs.patch
 src/browser/components/tabbrowser/Tabbrowser-sys-mjs.patch

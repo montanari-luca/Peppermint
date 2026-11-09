@@ -110,7 +110,11 @@ add_task(async function test_close_duplicate_tabs() {
     const closed = BrowserTestUtils.waitForEvent(first, "TabClose");
     closeDuplicates.command(window);
     await closed;
-    ok(!first.isConnected, "The tab used least recently is closed");
+    // TabClose fires before the tab leaves the DOM.
+    await TestUtils.waitForCondition(
+      () => !first.isConnected,
+      "The tab used least recently is closed"
+    );
     ok(second.isConnected, "The tab used most recently stays");
     ok(other.isConnected, "A different page stays");
     ok(!closeDuplicates.isAvailable(window), "Nothing left to close");

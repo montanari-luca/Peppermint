@@ -47,7 +47,7 @@ let gSites = null;
  *   The popular domains, most popular first. `label` is the part before the
  *   first dot, which is the name people type ("youtube" for youtube.com).
  */
-function loadSites() {
+export function loadSites() {
   gSites ??= fetch(DATA_URL)
     .then(response => response.json())
     .then(domains =>

@@ -1,0 +1,42 @@
+--- a/zen/urlbar/ZenUBActionsProvider.sys.mjs
++++ b/zen/urlbar/ZenUBActionsProvider.sys.mjs
+@@ -262,7 +262,10 @@
+         continue;
+       }
+       const label = action.extraPayload?.prettyName || action.label;
+-      const score = this.#calculateFuzzyScore(label, query);
++      const score = Math.max(
++        this.#calculateFuzzyScore(label, query),
++        this.#keywordScore(action, query)
++      );
+       if (
+         score >
+         (isPrefixed ? MINIMUM_PREFIXED_QUERY_SCORE : MINIMUM_QUERY_SCORE)
+@@ -279,6 +282,27 @@
+       return results.map(r => r.action);
+     }
+     return results.slice(0, MAX_RECENT_ACTIONS).map(r => r.action);
++  }
++
++  /**
++   * Peppermint: actions can list other words people search for (a comma
++   * separated `keywords` string). The best of them counts, a little below an
++   * equally good match on the label.
++   *
++   * @param {object} action The action to score.
++   * @param {string} query The user's search query.
++   * @returns {number} The score of the best keyword.
++   */
++  #keywordScore(action, query) {
++    const keywords = action.keywords;
++    if (!keywords) {
++      return 0;
++    }
++    let best = 0;
++    for (const keyword of keywords.split(",")) {
++      best = Math.max(best, this.#calculateFuzzyScore(keyword.trim(), query));
++    }
++    return best * 0.9;
+   }
+ 
+   /**

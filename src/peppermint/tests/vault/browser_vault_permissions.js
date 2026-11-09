@@ -233,6 +233,36 @@ add_task(async function test_history_records_changes_with_times() {
   );
 });
 
+add_task(async function test_history_labels_automatic_removals() {
+  await callHistory("clear");
+  const principal = principalOf(SITE);
+  Services.perms.addFromPrincipal(
+    principal,
+    "camera",
+    Services.perms.ALLOW_ACTION
+  );
+  const permission = Services.perms.getPermissionObject(
+    principal,
+    "camera",
+    true
+  );
+  PeppermintVaultPermissionLog.noteReason(permission, "auto-revoked");
+  Services.perms.removeFromPrincipal(principal, "camera");
+
+  const [removed] = await callHistory("list", { filter: "auto-revoked" });
+  Assert.ok(removed, "The automatic filter finds the removal");
+  Assert.equal(removed.to, null, "It is a reset");
+  Assert.ok(
+    removed.values.change.endsWith("(unused for a while)"),
+    "The change says why it happened"
+  );
+  Assert.equal(
+    (await callHistory("list", { filter: "auto-revoked" })).length,
+    1,
+    "Only the removal has a reason"
+  );
+});
+
 add_task(async function test_history_ignores_private_windows() {
   const principal = principalOf(PRIVATE_SITE, { privateBrowsingId: 1 });
   Services.perms.addFromPrincipal(

@@ -8,10 +8,17 @@
  * adding or removing a Peppermint feature never touches Zen's own files.
  */
 
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  PeppermintStartupDoctor:
+    "moz-src:///peppermint/startup-doctor/PeppermintStartupDoctor.sys.mjs",
+});
+
 // Each feature starts independently: one failing never blocks the others.
+// The startup doctor times each one in the first window (see about:report).
 function start(name, run) {
   try {
-    run();
+    lazy.PeppermintStartupDoctor.measure(name, run);
   } catch (error) {
     console.error(`${name} failed to start`, error);
   }
@@ -39,6 +46,11 @@ export const PeppermintStartup = {
       ChromeUtils.importESModule(
         "resource:///modules/zen/ZenTabUnloader.sys.mjs"
       ).ZenTabUnloader.start()
+    );
+    start("PeppermintCleanLinks", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/clean-links/PeppermintCleanLinks.sys.mjs"
+      ).PeppermintCleanLinks.start()
     );
     start("Peppermint actions", () =>
       ChromeUtils.importESModule(
@@ -132,6 +144,16 @@ export const PeppermintStartup = {
         "moz-src:///peppermint/tab-islands/PeppermintTabIslands.sys.mjs"
       ).PeppermintTabIslands.init(window)
     );
+    start("PeppermintUndoClose", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/undo-close/PeppermintUndoClose.sys.mjs"
+      ).PeppermintUndoClose.init(window)
+    );
+    start("PeppermintShortcutSheet", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/shortcut-sheet/PeppermintShortcutSheet.sys.mjs"
+      ).PeppermintShortcutSheet.init(window)
+    );
     start("PeppermintShortcutTooltips", () =>
       ChromeUtils.importESModule(
         "moz-src:///peppermint/shortcut-tooltips/PeppermintShortcutTooltips.sys.mjs"
@@ -146,6 +168,29 @@ export const PeppermintStartup = {
       ChromeUtils.importESModule(
         "moz-src:///peppermint/vault/PeppermintVault.sys.mjs"
       ).PeppermintVault.init(window)
+    );
+    start("PeppermintSitePrivacy", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/site-privacy/PeppermintSitePrivacy.sys.mjs"
+      ).PeppermintSitePrivacy.init(window)
+    );
+    start("PeppermintLookalike", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/lookalike/PeppermintLookalike.sys.mjs"
+      ).PeppermintLookalike.init(window)
+    );
+    start("PeppermintPermissionAutoRevoke", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/vault/PeppermintPermissionAutoRevoke.sys.mjs"
+      ).PeppermintPermissionAutoRevoke.start()
+    );
+    start("PeppermintFeatureTour", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/feature-tour/PeppermintFeatureTour.sys.mjs"
+      ).PeppermintFeatureTour.init(window)
+    );
+    start("PeppermintStartupDoctor", () =>
+      lazy.PeppermintStartupDoctor.firstWindowReady()
     );
   },
 };

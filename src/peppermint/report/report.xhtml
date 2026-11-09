@@ -8,6 +8,7 @@
     <meta charset="utf-8" />
     <title data-l10n-id="peppermint-report-title"></title>
     <link rel="localization" href="browser/peppermint-report.ftl" />
+    <link rel="localization" href="browser/preferences/zen-preferences.ftl" />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -62,6 +63,37 @@
         <h2 class="report-section-title" data-l10n-id="peppermint-report-top-sites"></h2>
         <ol id="report-site-list" class="report-site-list"></ol>
         <p id="report-no-sites" class="report-note" data-l10n-id="peppermint-report-no-sites" hidden="hidden"></p>
+      </section>
+
+      <section id="report-startup" class="report-startup" hidden="hidden">
+        <h2 class="report-section-title" data-l10n-id="peppermint-report-startup"></h2>
+        <p id="report-startup-empty" class="report-note" data-l10n-id="peppermint-report-startup-empty" hidden="hidden"></p>
+        <div id="report-startup-measured">
+          <div class="report-tiles">
+            <div class="report-tile" data-startup="last">
+              <span class="report-value"></span>
+              <span class="report-label" data-l10n-id="peppermint-report-startup-last"></span>
+            </div>
+            <div class="report-tile" data-startup="typical">
+              <span class="report-value"></span>
+              <span class="report-label" data-l10n-id="peppermint-report-startup-typical"></span>
+              <span class="report-hint"></span>
+            </div>
+            <div class="report-tile" data-startup="peppermint">
+              <span class="report-value"></span>
+              <span class="report-label" data-l10n-id="peppermint-report-startup-peppermint"></span>
+            </div>
+          </div>
+          <h3 class="report-subtitle" data-l10n-id="peppermint-report-startup-slowest"></h3>
+          <ol id="report-startup-slowest" class="report-site-list"></ol>
+        </div>
+        <div id="report-startup-mods-group" hidden="hidden">
+          <h3 class="report-subtitle" data-l10n-id="peppermint-report-startup-mods"></h3>
+          <ol id="report-startup-mods" class="report-site-list"></ol>
+        </div>
+        <h3 class="report-subtitle" data-l10n-id="peppermint-report-startup-tips"></h3>
+        <ul id="report-startup-tips" class="report-site-list"></ul>
+        <p id="report-startup-no-tips" class="report-note" data-l10n-id="peppermint-report-startup-no-tips" hidden="hidden"></p>
       </section>
 
       <section class="report-share">

@@ -19,3 +19,17 @@ peppermint-tab-close-button =
         [one] Close Tab
        *[other] Close Tabs
     }
+
+## Toast shown after tabs close, with a button that reopens them
+
+# Variables:
+#   $count (Number) - the number of tabs that closed together
+peppermint-undo-close-toast =
+    { $count ->
+        [one] Tab closed
+       *[other] { $count } tabs closed
+    }
+
+peppermint-undo-close-button =
+    .label = Undo
+    .tooltiptext = Reopen the closed tabs

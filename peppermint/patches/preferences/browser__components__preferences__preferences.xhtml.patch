@@ -1,11 +1,32 @@
 --- a/browser/components/preferences/preferences.xhtml
 +++ b/browser/components/preferences/preferences.xhtml
-@@ -123,26 +123,56 @@
+@@ -35,6 +35,7 @@
+   <link rel="stylesheet" href="chrome://browser/skin/preferences/search.css" />
+   <link rel="stylesheet" href="chrome://browser/content/usercontext/usercontext.css" />
+   <link rel="stylesheet" href="chrome://browser/skin/preferences/privacy.css" />
++  <link rel="stylesheet" href="chrome://browser/content/peppermint-features/features-pane.css" />
+   <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-group.css" />
+   <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-pane.css" />
+   <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-control.css" />
+@@ -86,6 +87,7 @@
+   <script src="chrome://browser/content/preferences/preferences.js"/>
+   <script src="chrome://browser/content/preferences/extensionControlled.js"/>
+   <script src="chrome://browser/content/preferences/findInPage.js"/>
++  <script src="chrome://browser/content/peppermint-features/features-pane.js"/>
+   <script src="chrome://browser/content/migration/migration-wizard.mjs" type="module"></script>
+   <script type="module" src="chrome://browser/content/backup/backup-settings.mjs"></script>
+   <script type="module" src="chrome://browser/content/preferences/widgets/dialog-button.mjs"></script>
+@@ -123,26 +125,61 @@
          iconsrc="chrome://browser/skin/preferences/category-general.svg"
          data-l10n-id="pane-general-title">
        </html:moz-page-nav-button>
 -      <html:moz-page-nav-button id="category-zen-looks"
 -        view="paneZenLooks"
++      <html:moz-page-nav-button id="category-zen-peppermint"
++        view="paneZenPeppermint"
++        iconsrc="chrome://browser/skin/zen-icons/lightbulb.svg"
++        data-l10n-id="pane-zen-peppermint-title">
++      </html:moz-page-nav-button>
 +      <html:moz-page-nav-button id="category-zen-homepage"
 +        view="paneZenHomepage"
 +        iconsrc="chrome://browser/skin/zen-icons/home.svg"
@@ -69,7 +90,7 @@
        <html:moz-page-nav-button id="category-sync"
          hidden="true"
          view="paneSync"
-@@ -279,9 +309,15 @@
+@@ -279,9 +316,16 @@
  #include privacy.inc.xhtml
  #include sync.inc.xhtml
  #include moreFromMozilla.inc.xhtml
@@ -85,6 +106,7 @@
 +#include zenPerformance.inc.xhtml
 +#include zenJanitor.inc.xhtml
 +#include zenGhostMode.inc.xhtml
++#include ../../../peppermint/features/features-pane.inc.xhtml
          </vbox>
        </vbox>
      </vbox>

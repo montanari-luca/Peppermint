@@ -115,11 +115,12 @@ export function startActiveTimeTracking() {
       }
     });
   };
+  const watched = new WeakSet();
   const watch = win => {
-    if (!win || win.closed || win.__zenActiveTimeWatch) {
+    if (!win || win.closed || watched.has(win)) {
       return;
     }
-    win.__zenActiveTimeWatch = true;
+    watched.add(win);
     win.addEventListener("focus", onFocus);
     win.addEventListener("blur", onBlur);
   };
