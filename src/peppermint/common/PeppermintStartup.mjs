@@ -8,10 +8,17 @@
  * adding or removing a Peppermint feature never touches Zen's own files.
  */
 
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  PeppermintStartupDoctor:
+    "moz-src:///peppermint/startup-doctor/PeppermintStartupDoctor.sys.mjs",
+});
+
 // Each feature starts independently: one failing never blocks the others.
+// The startup doctor times each one in the first window (see about:report).
 function start(name, run) {
   try {
-    run();
+    lazy.PeppermintStartupDoctor.measure(name, run);
   } catch (error) {
     console.error(`${name} failed to start`, error);
   }
@@ -176,6 +183,9 @@ export const PeppermintStartup = {
       ChromeUtils.importESModule(
         "moz-src:///peppermint/vault/PeppermintPermissionAutoRevoke.sys.mjs"
       ).PeppermintPermissionAutoRevoke.start()
+    );
+    start("PeppermintStartupDoctor", () =>
+      lazy.PeppermintStartupDoctor.firstWindowReady()
     );
   },
 };

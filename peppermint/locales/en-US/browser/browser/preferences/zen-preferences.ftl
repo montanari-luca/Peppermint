@@ -633,6 +633,10 @@ peppermint-feature-underpowered = Underpowered Mode
 peppermint-feature-underpowered-description = Freezes background tabs while the computer is struggling.
 peppermint-feature-underpowered-keywords = battery, slow, cpu, performance, power saving
 
+peppermint-feature-startup-doctor = Startup Doctor
+peppermint-feature-startup-doctor-description = Times each launch and shows in the report what slows startup down, with a fix for each cause.
+peppermint-feature-startup-doctor-keywords = startup, launch, slow, speed, performance, extensions, mods
+
 peppermint-feature-updater = Automatic Updates
 peppermint-feature-updater-description = Checks for new Peppermint versions and installs them when you restart.
 peppermint-feature-updater-keywords = update, version, upgrade

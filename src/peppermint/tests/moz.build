@@ -26,6 +26,7 @@ BROWSER_CHROME_MANIFESTS += [
     "shortcut_sheet/browser.toml",
     "shortcut_tooltips/browser.toml",
     "site_privacy/browser.toml",
+    "startup_doctor/browser.toml",
     "tab_archive/browser.toml",
     "tab_close_confirm/browser.toml",
     "tab_islands/browser.toml",

@@ -22,6 +22,9 @@ const { DownloadPaths } = ChromeUtils.importESModule(
 const { FileUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/FileUtils.sys.mjs"
 );
+const { collectStartup, disableMod } = ChromeUtils.importESModule(
+  "moz-src:///peppermint/startup-doctor/PeppermintStartupDoctor.sys.mjs"
+);
 
 const SHARE_WIDTH = 1200;
 const SHARE_HEIGHT = 630;
@@ -253,6 +256,217 @@ async function share(save) {
   }
 }
 
+// Startup: how long the last launches took and what slows them down. It does
+// not depend on the period.
+
+const startupSection = document.getElementById("report-startup");
+const startupTiles = Object.fromEntries(
+  Array.from(startupSection.querySelectorAll("[data-startup]"), tile => [
+    tile.dataset.startup,
+    tile,
+  ])
+);
+const SECOND_MS = 1000;
+const KB = 1024;
+
+function formatDuration(ms) {
+  if (ms == null) {
+    return "\u2013";
+  }
+  const seconds = ms >= SECOND_MS;
+  return new Intl.NumberFormat(undefined, {
+    style: "unit",
+    unit: seconds ? "second" : "millisecond",
+    unitDisplay: "short",
+    maximumFractionDigits: seconds ? 1 : 0,
+  }).format(seconds ? ms / SECOND_MS : ms);
+}
+
+function formatSize(bytes) {
+  const megabytes = bytes >= KB * KB;
+  return new Intl.NumberFormat(undefined, {
+    style: "unit",
+    unit: megabytes ? "megabyte" : "kilobyte",
+    unitDisplay: "short",
+    maximumFractionDigits: 1,
+  }).format(bytes / (megabytes ? KB * KB : KB));
+}
+
+function topWindow() {
+  return window.browsingContext.topChromeWindow;
+}
+
+function row({ label, labelId, text, textId, textArgs, value, action }) {
+  const item = document.createElement("li");
+  item.className = "report-site";
+  if (label || labelId) {
+    const labelElement = document.createElement("span");
+    labelElement.className = "report-row-label";
+    if (labelId) {
+      document.l10n.setAttributes(labelElement, labelId);
+    } else {
+      labelElement.textContent = label;
+    }
+    item.append(labelElement);
+  }
+  if (text || textId) {
+    const paragraph = document.createElement("span");
+    paragraph.className = "report-row-text";
+    if (textId) {
+      document.l10n.setAttributes(paragraph, textId, textArgs);
+    } else {
+      paragraph.textContent = text;
+    }
+    item.append(paragraph);
+  }
+  if (value) {
+    const amount = document.createElement("span");
+    amount.className = "report-row-value";
+    amount.textContent = value;
+    item.append(amount);
+  }
+  if (action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "report-button";
+    button.dataset.action = action.name;
+    document.l10n.setAttributes(button, action.l10nId);
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        await action.run();
+      } catch (error) {
+        console.error("The startup fix failed", error);
+        button.disabled = false;
+      }
+    });
+    item.append(button);
+  }
+  return item;
+}
+
+function turnOff(pref) {
+  return {
+    name: "turn-off",
+    l10nId: "peppermint-report-startup-turn-off",
+    run: async () => {
+      Services.prefs.setBoolPref(pref, false);
+      await loadStartup();
+    },
+  };
+}
+
+const TIPS = {
+  extensions: tip =>
+    row({
+      textId: "peppermint-report-startup-tip-extensions",
+      textArgs: { count: tip.count },
+      action: {
+        name: "open-addons",
+        l10nId: "peppermint-report-startup-open-addons",
+        run: () =>
+          topWindow().BrowserAddonUI.openAddonsMgr("addons://list/extension"),
+      },
+    }),
+  mods: tip =>
+    row({
+      textId: "peppermint-report-startup-tip-mods",
+      textArgs: { size: formatSize(tip.bytes) },
+      action: {
+        name: "manage-mods",
+        l10nId: "peppermint-report-startup-manage-mods",
+        run: () => topWindow().openPreferences("paneZenMarketplace"),
+      },
+    }),
+  "restore-on-demand": () =>
+    row({
+      textId: "peppermint-report-startup-tip-restore",
+      action: {
+        name: "restore-on-demand",
+        l10nId: "peppermint-report-startup-restore-fix",
+        run: async () => {
+          Services.prefs.setBoolPref(
+            "browser.sessionstore.restore_on_demand",
+            true
+          );
+          await loadStartup();
+        },
+      },
+    }),
+};
+
+function renderStartup(startup) {
+  startupSection.hidden = !startup.enabled;
+  if (!startup.enabled) {
+    return;
+  }
+  const measured = startup.launches > 0;
+  document.getElementById("report-startup-empty").hidden = measured;
+  document.getElementById("report-startup-measured").hidden = !measured;
+
+  startupTiles.last.querySelector(".report-value").textContent = formatDuration(
+    startup.lastMs
+  );
+  startupTiles.typical.querySelector(".report-value").textContent =
+    formatDuration(startup.typicalMs);
+  document.l10n.setAttributes(
+    startupTiles.typical.querySelector(".report-hint"),
+    "peppermint-report-startup-launches",
+    { count: startup.launches }
+  );
+  startupTiles.peppermint.querySelector(".report-value").textContent =
+    formatDuration(startup.peppermintMs);
+
+  const slowFeatures = new Set(
+    startup.tips.filter(tip => tip.id == "feature").map(tip => tip.feature.id)
+  );
+  document.getElementById("report-startup-slowest").replaceChildren(
+    ...startup.slowest.map(({ ms, feature }) =>
+      row({
+        labelId: `peppermint-feature-${feature.id}`,
+        value: formatDuration(ms),
+        action: slowFeatures.has(feature.id) ? turnOff(feature.pref) : null,
+      })
+    )
+  );
+
+  const mods = startup.mods.filter(mod => mod.bytes > 0).slice(0, 3);
+  document.getElementById("report-startup-mods-group").hidden = !mods.length;
+  document.getElementById("report-startup-mods").replaceChildren(
+    ...mods.map(mod =>
+      row({
+        label: mod.name,
+        value: formatSize(mod.bytes),
+        action: {
+          name: "disable-mod",
+          l10nId: "peppermint-report-startup-turn-off",
+          run: async () => {
+            await disableMod(mod.id);
+            await loadStartup();
+          },
+        },
+      })
+    )
+  );
+
+  const tips = startup.tips.filter(tip => TIPS[tip.id]);
+  document
+    .getElementById("report-startup-tips")
+    .replaceChildren(...tips.map(tip => TIPS[tip.id](tip)));
+  document.getElementById("report-startup-no-tips").hidden = !!tips.length;
+}
+
+let startupToken = 0;
+
+async function loadStartup() {
+  const token = ++startupToken;
+  const startup = await collectStartup();
+  if (token == startupToken) {
+    renderStartup(startup);
+    startupSection.dispatchEvent(new CustomEvent("StartupRendered"));
+  }
+}
+
 document
   .getElementById("report-copy")
   .addEventListener("click", () => share(false));
@@ -261,3 +475,4 @@ document
   .addEventListener("click", () => share(true));
 
 load();
+loadStartup();

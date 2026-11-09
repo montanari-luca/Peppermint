@@ -120,6 +120,40 @@ body {
   text-transform: uppercase;
 }
 
+.report-subtitle {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.report-startup .report-tiles {
+  margin-block-end: 0.5rem;
+}
+
+.report-row-label {
+  margin-inline-end: auto;
+  overflow-wrap: anywhere;
+}
+
+.report-row-text {
+  margin-inline-end: auto;
+  color: var(--report-ink);
+  font-size: 0.9rem;
+}
+
+.report-row-value {
+  color: var(--report-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.report-site > .report-button {
+  flex: none;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.8rem;
+}
+
 .report-site-list {
   display: flex;
   flex-direction: column;

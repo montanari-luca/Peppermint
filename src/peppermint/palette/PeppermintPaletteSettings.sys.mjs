@@ -85,6 +85,12 @@ export const SETTINGS = [
     icon: "security",
   },
   {
+    id: "startup-doctor",
+    keywords: true,
+    pref: "peppermint.startup-doctor.enabled",
+    icon: "rocket",
+  },
+  {
     id: "permission-auto-revoke",
     keywords: true,
     pref: "peppermint.permissions.auto-revoke.enabled",
