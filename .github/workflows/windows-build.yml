@@ -144,13 +144,13 @@ jobs:
           set -x
           mkdir -p ~/win-cross
           cd engine/
-          sudo apt-get install -y python3-launchpadlib
-          sudo add-apt-repository -y ppa:savoury1/backports
-          sudo apt-get update
-          sudo apt-get install -y \
+          # No third-party PPA: everything below is in the stock Ubuntu archive, and PPAs
+          # such as savoury1/backports lag behind new ubuntu-latest releases (404 on Release).
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y \
             autoconf autoconf2.13 automake bison build-essential cabextract curl cmake \
             flex gawk gcc-multilib git gnupg jq libbz2-dev libexpat1-dev libffi-dev \
-            libncursesw5-dev libsqlite3-dev libssl-dev libtool libucl-dev libxml2-dev \
+            libncurses-dev libsqlite3-dev libssl-dev libtool libucl-dev libxml2-dev \
             msitools ninja-build openssh-client p7zip-full pkg-config procps \
             python3-requests python3-toml scons subversion tar unzip uuid uuid-dev \
             wget zip zlib1g-dev aria2
