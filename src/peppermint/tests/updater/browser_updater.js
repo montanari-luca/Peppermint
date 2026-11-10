@@ -92,6 +92,57 @@ add_task(function test_pick_release() {
     null,
     "Plain http is refused"
   );
+  const site = {
+    latest: "2026.0.3",
+    downloads: {
+      "macos-universal": URLS.macos,
+      "windows-x64": URLS.windows,
+      "windows-x64-zip": "https://example.com/portable.zip",
+      "linux-x64": URLS.linux,
+      "linux-arm64": URLS.linux,
+    },
+    sha256: { "macos-universal": "b".repeat(64) },
+  };
+  const siteMac = pickRelease(site, "macosx", "aarch64-gcc3");
+  Assert.equal(siteMac.url, URLS.macos, "The website's macOS id is read");
+  Assert.equal(siteMac.sha256, "b".repeat(64), "Its checksum follows its id");
+  Assert.equal(
+    pickRelease(site, "win", "x86_64-msvc").url,
+    URLS.windows,
+    "The website's Windows installer id is read, not the portable zip"
+  );
+  Assert.equal(
+    pickRelease(site, "win", "aarch64-msvc"),
+    null,
+    "Windows ARM still never gets the x64 installer"
+  );
+  Assert.equal(
+    pickRelease(site, "linux", "aarch64-gcc3").url,
+    URLS.linux,
+    "The website's Linux ARM id is read"
+  );
+  Assert.equal(
+    pickRelease(
+      {
+        latest: "2026.0.3",
+        downloads: { macos: URLS.macos, "macos-universal": "https://x.test/" },
+      },
+      "macosx"
+    ).url,
+    URLS.macos,
+    "The updater's own key wins over the website's"
+  );
+  Assert.equal(
+    pickRelease(
+      {
+        latest: "2026.0.3",
+        downloads: { macos: "", "macos-universal": URLS.macos },
+      },
+      "macosx"
+    ).url,
+    URLS.macos,
+    "An empty own key falls back to the website's id"
+  );
   Assert.equal(pickRelease(null, "macosx"), null, "No manifest");
   Assert.equal(pickRelease({ downloads: URLS }, "macosx"), null, "No version");
   const hash = "a".repeat(64);
@@ -153,10 +204,9 @@ add_task(async function test_bad_manifest() {
 });
 
 add_task(async function test_about_dialog() {
-  Assert.equal(
-    Services.appinfo.version,
-    "2026.0.2",
-    "The app reports Peppermint's own version"
+  Assert.ok(
+    /^\d{4}\.\d+\.\d+$/.test(Services.appinfo.version),
+    "The app reports Peppermint's own version, not Firefox's"
   );
   const dialog = window.openDialog(
     "chrome://browser/content/aboutDialog.xhtml",
@@ -173,11 +223,12 @@ add_task(async function test_about_dialog() {
     !doc.getElementById("checkForUpdatesButton"),
     "Firefox's own update widgets are gone"
   );
+  const { version } = JSON.parse(
+    doc.getElementById("version").getAttribute("data-l10n-args")
+  );
   Assert.ok(
-    doc.getElementById("version").getAttribute("data-l10n-args").includes(
-      "2026.0.2"
-    ),
-    "The About dialog shows the version"
+    /^\d{4}\.\d+\.\d+$/.test(version),
+    `The About dialog shows Peppermint's version, not Firefox's (${version})`
   );
   dialog.close();
 });

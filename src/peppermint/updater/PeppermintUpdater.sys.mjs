@@ -16,6 +16,8 @@
  * An empty or missing download means there is no release for that platform.
  * Optional extras: "windows-arm64" and "linux-aarch64" downloads for ARM
  * machines, and "sha256": { "<download key>": "<hex>" } to verify a file.
+ * The website's download ids ("macos-universal", "windows-x64",
+ * "linux-x64", "linux-arm64") are read too, so one JSON serves both.
  *
  * The state is exposed through PeppermintUpdater.state and announced with the
  * "peppermint-update-state" observer topic, so the sidebar notification and
@@ -88,25 +90,26 @@ export function isNewerVersion(current, latest) {
 }
 
 /**
- * The key of the "downloads" map for this machine, or null when none can be
- * used. ARM builds only ever get an ARM file: handing them an x64 installer
- * would swap the app for the wrong architecture.
+ * The keys of the "downloads" map that fit this machine, best first: the
+ * updater's own key, then the website's id for the same file. Empty when
+ * nothing can be used. ARM builds only ever get an ARM file: handing them an
+ * x64 installer would swap the app for the wrong architecture.
  *
  * @param {string} [platform] - AppConstants.platform value.
  * @param {string} [abi] - Services.appinfo.XPCOMABI value.
- * @returns {string|null}
+ * @returns {string[]}
  */
-export function downloadKey(platform = AppConstants.platform, abi) {
+export function downloadKeys(platform = AppConstants.platform, abi) {
   const arm = /^(aarch64|arm64)/i.test(abi ?? Services.appinfo.XPCOMABI);
   switch (platform) {
     case "macosx":
-      return "macos";
+      return ["macos", "macos-universal"];
     case "win":
-      return arm ? "windows-arm64" : "windows";
+      return arm ? ["windows-arm64"] : ["windows", "windows-x64"];
     case "linux":
-      return arm ? "linux-aarch64" : "linux";
+      return arm ? ["linux-aarch64", "linux-arm64"] : ["linux", "linux-x64"];
   }
-  return null;
+  return [];
 }
 
 /**
@@ -122,11 +125,13 @@ export function pickRelease(json, platform, abi) {
   if (!json || typeof json.latest != "string") {
     return null;
   }
-  const key = downloadKey(platform, abi);
-  const raw = key && json.downloads?.[key];
-  if (typeof raw != "string" || !raw) {
+  const key = downloadKeys(platform, abi).find(
+    k => typeof json.downloads?.[k] == "string" && json.downloads[k]
+  );
+  if (!key) {
     return null;
   }
+  const raw = json.downloads[key];
   // Checked on the text itself, before URL parsing can normalise the scheme.
   if (!/^https:\/\//i.test(raw)) {
     return null;
