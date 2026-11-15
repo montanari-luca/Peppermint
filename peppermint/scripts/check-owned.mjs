@@ -85,7 +85,12 @@ if (upstream) {
     if (!upstreamBlobs.length) {
       continue; // not a Zen file
     }
-    if (status !== "D") {
+    if (status === "D") {
+      // Zen deleted the file too: the deletion came in with an upstream merge.
+      if (!blob(`${upstream}:${file}`)) {
+        continue;
+      }
+    } else {
       // Staged (or checked out) content identical to Zen's own copy is fine:
       // that is a revert to upstream or a merge, not a Peppermint edit.
       let current = blob(`:${file}`);
