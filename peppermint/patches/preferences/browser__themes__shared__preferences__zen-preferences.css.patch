@@ -3,7 +3,7 @@
 @@ -40,7 +40,7 @@
  
  .navigation {
-   padding: 4%;
+   padding: var(--zen-preferences-navigation-padding);
 -  background: var(--zen-colors-tertiary);
 +  background: color-mix(in oklch, var(--zen-panel-background) 82%, black);
  }
@@ -13,13 +13,13 @@
  
  groupbox button,
  groupbox menulist {
--  background-color: light-dark(#f1f1f1, #363636);
+-  background-color: var(--zen-preferences-button-background);
 +  background-color: var(--zen-panel-raised-background);
    color: light-dark(black, white);
  }
  
 @@ -65,6 +65,16 @@
-   padding-inline: 20px !important;
+   padding-inline: var(--zen-space-20) !important;
  }
  
 +/* Firefox shows only icons below 950px, which settings windows often are;
@@ -33,10 +33,10 @@
 +}
 +
  .textbox-search-sign {
-   margin-right: 15px;
+   margin-right: var(--zen-space-15);
  }
 @@ -85,10 +95,18 @@
-   margin-bottom: 15px;
+   margin-bottom: var(--zen-space-15);
  }
  
 -#category-zen-looks > .category-icon {
@@ -53,11 +53,11 @@
 +}
 +
  #zenLooksAndFeelGroup > html|div:last-of-type {
-   margin-top: 15px;
+   margin-top: var(--zen-space-15);
  }
 @@ -99,7 +117,7 @@
    display: flex;
-   border-radius: 10px;
+   border-radius: var(--zen-border-radius-10);
    border: 1px solid var(--zen-colors-border);
 -  background: var(--zen-colors-tertiary);
 +  background: var(--zen-panel-raised-background);
@@ -113,16 +113,16 @@
 @@ -164,7 +198,7 @@
    flex-direction: column;
    justify-content: center;
-   padding: 15px;
+   padding: var(--zen-space-15);
 -  background: var(--zen-colors-tertiary);
 +  background: var(--zen-panel-raised-background);
-   border-radius: 10px;
-   margin-bottom: 10px;
+   border-radius: var(--zen-border-radius-10);
+   margin-bottom: var(--zen-space-10);
  }
 @@ -192,7 +226,12 @@
-   border-radius: 10px;
-   margin: 10px;
-   background: light-dark(rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.3));
+   border-radius: var(--zen-border-radius-10);
+   margin: var(--zen-space-10);
+   background: var(--zen-preferences-color-picker-deck-background);
 -  backdrop-filter: blur(15px);
 +
 +  @media not (prefers-reduced-transparency: reduce) {
@@ -130,15 +130,13 @@
 +      backdrop-filter: var(--zen-frosted-backdrop);
 +    }
 +  }
-   border: 2px solid light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
+   border: 2px solid var(--zen-color-contrast-10);
  }
  
-@@ -206,167 +245,8 @@
-   border-radius: 50px;
-   background: var(--zen-primary-color);
+@@ -208,166 +247,6 @@
    transform: translate(-50%, -50%);
--}
--
+ }
+ 
 -/* THemes marketplace */
 -
 -#category-zen-marketplace > .category-icon {
@@ -147,7 +145,7 @@
 -
 -.zenThemeMarketplaceItem {
 -  border: 1px solid var(--zen-colors-border);
--  border-radius: 5px;
+-  border-radius: var(--zen-border-radius-5);
 -  padding: var(--space-medium);
 -  position: relative;
 -  overflow-x: hidden;
@@ -158,7 +156,7 @@
 -}
 -
 -.zenThemeMarketplaceItemHomepageButton {
--  width: 30px;
+-  width: var(--zen-size-30);
 -  min-width: 0;
 -  position: relative;
 -  cursor: pointer;
@@ -169,8 +167,8 @@
 -    top: 50%;
 -    left: 50%;
 -    transform: translate(-50%, -50%);
--    width: 18px;
--    height: 18px;
+-    width: var(--zen-size-18);
+-    height: var(--zen-size-18);
 -    background-image: url("chrome://browser/skin/home.svg");
 -    background-repeat: no-repeat;
 -    background-size: cover;
@@ -180,7 +178,7 @@
 -}
 -
 -.zenThemeMarketplaceItemConfigureButton {
--  width: 30px;
+-  width: var(--zen-size-30);
 -  min-width: 0;
 -  position: relative;
 -  cursor: pointer;
@@ -191,8 +189,8 @@
 -    top: 50%;
 -    left: 50%;
 -    transform: translate(-50%, -50%);
--    width: 15px;
--    height: 15px;
+-    width: var(--zen-size-15);
+-    height: var(--zen-size-15);
 -    background-image: url("chrome://global/skin/icons/settings.svg");
 -    background-repeat: no-repeat;
 -    background-size: cover;
@@ -200,15 +198,15 @@
 -}
 -
 -.zenThemeMarketplaceItemPreferenceCheckbox {
--  margin-right: 10px;
+-  margin-right: var(--zen-space-10);
 -}
 -
 -.zenThemeMarketplaceItemPreference:first-of-type {
--  margin-top: 10px;
+-  margin-top: var(--zen-space-10);
 -}
 -
 -.zenThemeMarketplaceItemPreference:not(:last-of-type) {
--  margin-bottom: 10px;
+-  margin-bottom: var(--zen-space-10);
 -}
 -
 -.zenThemeMarketplaceItemPreferenceData > * {
@@ -239,15 +237,16 @@
 -  display: grid;
 -  gap: var(--space-medium);
 -  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
- }
- 
+-}
+-
+-/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector -- the list is filled dynamically and only gets a margin when it has items */
 -#zenThemeMarketplaceList:has(> *) {
--  margin: 15px 0;
+-  margin: var(--zen-space-15) 0;
 -}
 -
 -.zenThemeMarketplaceItemUninstallButton,
 -#zenThemeMarketplaceImport {
--  margin-left: auto;
+-  margin-inline-start: auto;
 -  cursor: pointer;
 -}
 -
@@ -259,8 +258,8 @@
 -.zenThemeMarketplaceItemPreferenceDialog {
 -  display: flex;
 -  flex-direction: column;
--  padding: 10px;
--  min-width: 650px;
+-  padding: var(--zen-space-10);
+-  min-width: var(--zen-preferences-theme-dialog-min-width);
 -}
 -
 -.zenThemeMarketplaceItemPreferenceDialogTopBar {
@@ -294,14 +293,14 @@
 -  align-items: center;
 -
 -  & moz-toggle {
--    margin-left: 10px;
+-    margin-left: var(--zen-space-10);
 -  }
 -}
 -
  #zenLayoutList {
    display: flex;
    flex-wrap: wrap;
-@@ -406,8 +286,8 @@
+@@ -407,8 +286,8 @@
  /* Disable mozilla's settings */
  
  #dataCollectionCategory,
@@ -311,7 +310,7 @@
  #websiteAdvertisingGroup,
  #helpButton,
  #support-firefox,
-@@ -425,14 +305,116 @@
+@@ -426,14 +305,116 @@
    list-style-image: url("chrome://devtools/skin/images/tool-storage.svg");
  }
  

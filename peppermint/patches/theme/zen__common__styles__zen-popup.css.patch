@@ -33,7 +33,7 @@
      --zen-toast-max-height: 42px;
      @media (-moz-platform: macos) {
 @@ -347,12 +348,38 @@
-     font-weight: 600;
+     font-weight: var(--font-weight-semibold);
      align-items: center;
      width: max-content;
 -    position: absolute;
@@ -42,7 +42,7 @@
      transform-origin: top center;
      max-height: var(--zen-toast-max-height);
      min-height: var(--zen-toast-max-height);
-     font-size: 14px;
+     font-size: var(--zen-font-size-14);
  
 +    &[frosted] {
 +      background: var(--zen-popup-background-solid);
@@ -70,5 +70,5 @@
 +    }
 +
      & .description {
-       opacity: 0.6;
+       opacity: var(--zen-opacity-60);
        font-size: smaller;

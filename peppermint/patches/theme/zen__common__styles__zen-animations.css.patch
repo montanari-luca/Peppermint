@@ -1,6 +1,6 @@
 --- a/zen/common/styles/zen-animations.css
 +++ b/zen/common/styles/zen-animations.css
-@@ -48,44 +48,32 @@
+@@ -48,46 +48,32 @@
    }
  }
  
@@ -29,6 +29,7 @@
  /* Mark: URL Bar */
  @keyframes zen-urlbar-searchmode {
    0% {
+-    /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens -- depends on var(); a custom property declared inside @keyframes would animate discretely */
 -    box-shadow: 0 0 20px
 -      color-mix(
 -        in srgb,
@@ -43,17 +44,18 @@
    }
  
    100% {
+-    /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens -- depends on var(); a custom property declared inside @keyframes would animate discretely */
 -    box-shadow: 0 0 250px
 -      color-mix(in srgb, var(--zen-primary-color), transparent 100%);
 +    opacity: 0;
    }
  }
  
-@@ -152,6 +140,15 @@
+@@ -178,6 +164,15 @@
    to {
      transform: translate(-50%, -50%) scale(1);
      opacity: 1;
--    width: 10rem;
+-    width: var(--zen-loading-progress-bar-settled-width);
    }
  }
 +

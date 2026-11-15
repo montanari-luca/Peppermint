@@ -4,6 +4,7 @@ src/browser/components/contextualidentity/content/ContainerCreationPanel-mjs.pat
 src/browser/components/customizableui/ToolbarContextMenu-sys-mjs.patch
 src/browser/components/migration/ChromeMigrationUtils-sys-mjs.patch
 src/browser/components/migration/MigrationUtils-sys-mjs.patch
+src/browser/components/preferences/main-js.patch
 src/browser/components/tabbrowser/Tabbrowser-sys-mjs.patch
 src/browser/components/tabbrowser/content/tab-mjs.patch
 src/browser/locales/en-US/browser/policies__policies-descriptions-ftl.patch
