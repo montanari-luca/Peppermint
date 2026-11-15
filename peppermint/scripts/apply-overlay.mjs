@@ -80,8 +80,11 @@ function revert() {
         restorePristine(target);
         continue;
       }
+      // --forward: without it, --batch treats a file that does not carry the
+      // patch (a freshly downloaded engine) as "reversed" and applies the
+      // patch forward instead of failing.
       const result = runPatch(
-        ["-p1", "-R", "--batch", "--no-backup-if-mismatch", "-i", stored],
+        ["-p1", "-R", "--forward", "--batch", "--no-backup-if-mismatch", "-r", "-", "-i", stored],
         engineDir
       );
       if (!result.ok) {

@@ -1,9 +1,11 @@
 --- a/zen/common/styles/zen-single-components.css
 +++ b/zen/common/styles/zen-single-components.css
-@@ -400,6 +400,18 @@
+@@ -396,6 +396,18 @@
+       opacity: var(--zen-opacity-50);
+     }
    }
- }
- 
++}
++
 +#zen-site-data-cookie-consent-count {
 +  margin-inline-start: 6px;
 +  font-weight: 500;
@@ -14,15 +16,15 @@
 +#zen-site-data-cookie-consent-pause:focus-visible {
 +  outline: 2px solid var(--focus-outline-color, currentColor);
 +  outline-offset: 2px;
-+}
-+
- #zen-site-data-new-addon-button .toolbarbutton-text {
-   display: none;
- }
-@@ -518,6 +530,22 @@
-   }
  }
  
+ #zen-site-data-new-addon-button .toolbarbutton-text {
+@@ -514,8 +526,24 @@
+   .permission-popup-boost-item[state="enabled"] &::before {
+     opacity: 1;
+   }
++}
++
 +.popup-notification-duration {
 +  margin-top: 8px;
 +  align-items: center;
@@ -32,8 +34,8 @@
 +.popup-notification-duration-label {
 +  margin: 0;
 +  opacity: 0.8;
-+}
-+
+ }
+ 
 +.popup-notification-duration-menulist {
 +  flex: 1;
 +  min-width: 12em;
@@ -41,8 +43,8 @@
 +
  .zen-permission-popup-permission-state-label,
  .zen-permission-popup-boost-state-label {
-   opacity: 0.6;
-@@ -571,12 +599,16 @@
+   opacity: var(--zen-opacity-60);
+@@ -567,12 +595,16 @@
      flex-direction: row-reverse;
    }
  
@@ -52,7 +54,7 @@
      appearance: none;
 -    -moz-context-properties: fill;
 -    fill: currentColor;
--    color: light-dark(rgba(0, 0, 0, 0.8), rgba(255, 255, 255, 0.8));
+-    color: var(--zen-color-contrast-80);
 +    -moz-context-properties: fill, fill-opacity;
 +    --zen-site-data-header-icon-fill: light-dark(
 +      var(--zen-primary-color),
@@ -63,14 +65,14 @@
      width: var(--size-item-xlarge);
      height: var(--size-item-large);
      position: relative;
-@@ -590,10 +622,14 @@
+@@ -586,10 +618,14 @@
        display: none;
      }
  
 -    & image {
 +    & image,
 +    & .toolbarbutton-icon {
-       width: 18px;
+       width: var(--zen-size-18);
        pointer-events: none;
        z-index: 1;
 +      -moz-context-properties: fill, fill-opacity;
@@ -79,7 +81,7 @@
      }
  
      &::before {
-@@ -604,15 +640,18 @@
+@@ -600,12 +636,18 @@
        will-change: transform;
  
        @media (-moz-platform: macos) {
@@ -90,19 +92,18 @@
 +          var(--zen-raised-button-background-bottom, rgb(246, 246, 246))
 +        );
  
-         box-shadow:
-           0 2px 4px rgba(0, 0, 0, 0.1),
--          inset 0 1px 0 light-dark(transparent, rgba(255, 255, 255, 0.15));
+-        box-shadow: var(--zen-site-data-header-button-shadow);
++        box-shadow:
++          0 2px 4px rgba(0, 0, 0, 0.1),
 +          inset 0 1px 0 var(--zen-raised-button-inset, transparent);
-         border-radius: 6px;
+         border-radius: var(--zen-border-radius-6);
          corner-shape: superellipse(var(--zen-squircle-value));
--        --base-border-color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.1));
--        border: 0.5px solid light-dark(var(--base-border-color), rgb(21, 21, 21));
+-        border: 0.5px solid var(--zen-site-data-header-button-border-color);
 +        border: 0.5px solid var(--zen-raised-button-border, rgba(0, 0, 0, 0.3));
        }
  
        @media not (-moz-platform: macos) {
-@@ -704,6 +743,10 @@
+@@ -699,6 +741,10 @@
      /* Still works on firefox */
      -webkit-text-fill-color: transparent;
      animation: zen-text-gradient 5s linear infinite;
@@ -113,7 +114,7 @@
      font-size: initial;
    }
  
-@@ -738,7 +781,12 @@
+@@ -738,7 +784,12 @@
  
      & notification-message {
        background: color-mix(in srgb, var(--zen-colors-tertiary) 70%, transparent 30%);
@@ -127,15 +128,15 @@
        border: 1px solid var(--arrowpanel-border-color);
        border-radius: var(--zen-border-radius);
  
-@@ -779,6 +827,7 @@
+@@ -779,6 +830,7 @@
    contain: content;
  
    &[long-load="true"] {
-+    width: 10rem;
++    width: var(--zen-loading-progress-bar-settled-width);
      opacity: 1;
      animation: zen-progress-bar-settle .3s ease-out forwards;
-     background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
-@@ -806,6 +855,13 @@
+     background: var(--zen-color-contrast-10);
+@@ -805,6 +857,13 @@
    :root[inDOMFullscreen="true"] & {
      display: none;
    }
@@ -149,7 +150,7 @@
  }
  
  #TabsToolbar-customization-target:is([zen-library-stack-open], [zen-library-stack-closing]) {
-@@ -832,6 +888,8 @@
+@@ -831,6 +890,8 @@
  }
  
  %include zen-library-widget.css

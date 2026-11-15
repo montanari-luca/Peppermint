@@ -8,6 +8,7 @@ engine/
 firefox-*/
 node_modules/
 .surfer/
+.tokens-studio/
 
 __pycache__/
 dist/

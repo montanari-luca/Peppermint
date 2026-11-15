@@ -4,7 +4,7 @@
  
    overflow: clip;
    z-index: -1;
--  background: light-dark(#e9e9e9, #131313);
+-  background: var(--zen-compact-mode-toolbar-background);
 +  background: light-dark(#115e59, #042f2e);
    box-shadow: var(--zen-big-shadow);
  
@@ -16,7 +16,7 @@
 -  :is(#navigator-toolbox, .zen-library-space) .zen-toolbar-background:not(:-moz-window-inactive) {
 +  :root:not([zen-no-acrylic='true']) :is(#navigator-toolbox, .zen-library-space) .zen-toolbar-background:not(:-moz-window-inactive) {
      /* Limit backdrop bleed so toolbar text stays readable over bright pages. */
--    background: light-dark(rgb(233 233 233 / 80%), rgb(19 19 19 / 80%));
+-    background: var(--zen-compact-mode-toolbar-acrylic-background);
 +    background-color: light-dark(rgb(15 118 110 / 72%), rgb(4 47 46 / 78%));
      /* Generic backgrounds otherwise follow the window's scheme directly. */
      color-scheme: inherit;

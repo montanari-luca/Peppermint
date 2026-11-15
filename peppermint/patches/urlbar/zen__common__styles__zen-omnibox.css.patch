@@ -1,12 +1,11 @@
 --- a/zen/common/styles/zen-omnibox.css
 +++ b/zen/common/styles/zen-omnibox.css
-@@ -267,26 +267,80 @@
+@@ -271,24 +271,80 @@
      margin-inline-end: 0;
    }
  
 -  & .urlbar-background {
 -    --zen-urlbar-background-base: light-dark(rgb(255, 255, 255), rgb(24 24 24));
--    /* stylelint-disable-next-line media-query-no-invalid */
 -    @media -moz-pref("zen.theme.acrylic-urlbar") and (not (prefers-reduced-transparency: reduce)) {
 -      &:not(:-moz-window-inactive) {
 -        --zen-urlbar-background-transparent: light-dark(
@@ -37,7 +36,7 @@
 +      & .urlbarView-title,
 +      & .urlbar-input {
 +        color: var(--zen-frosted-fg) !important;
-+      }
+       }
 +
 +      & .urlbarView-url,
 +      & .urlbarView-title-separator::before,
@@ -55,7 +54,7 @@
 +
 +      & .urlbar-input-container {
 +        border-bottom: 1px solid var(--zen-frosted-divider);
-       }
++      }
      }
 -    background-color: var(--zen-urlbar-background-transparent, var(--zen-urlbar-background-base)) !important;
 +  }
@@ -63,12 +62,11 @@
 +  & .urlbar-background {
 +    --zen-urlbar-background-base: light-dark(rgb(255, 255, 255), rgb(24 24 24));
 +    background-color: var(--zen-urlbar-background-base) !important;
-     box-shadow: 0 30px 140px -15px light-dark(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6)) !important;
+     box-shadow: var(--zen-urlbar-floating-shadow) !important;
      backdrop-filter: none !important;
-     outline: 0.5px solid light-dark(rgba(0, 0, 0, 0.2), rgb(75, 75, 75)) !important;
+     outline: 0.5px solid var(--zen-urlbar-floating-outline-color) !important;
      outline-offset: var(--zen-urlbar-outline-offset) !important;
  
--    /* stylelint-disable-next-line media-query-no-invalid */
 -    @media -moz-pref("zen.theme.acrylic-urlbar") and (not (prefers-reduced-transparency: reduce))  {
 -      backdrop-filter: var(--zen-backdrop-underlay) blur(40px) !important;
 +    @media not (prefers-reduced-transparency: reduce) {
@@ -94,8 +92,8 @@
      }
    }
  
-@@ -295,14 +349,23 @@
-     border-radius: 15px !important;
+@@ -297,14 +353,23 @@
+     border-radius: var(--zen-border-radius-15) !important;
    }
  
 +  &[zen-floating-urlbar="true"],
@@ -121,7 +119,7 @@
      animation: zen-urlbar-searchmode ease-out 1s forwards;
    }
  
-@@ -324,7 +387,9 @@
+@@ -332,7 +397,9 @@
    #notification-popup-box:not([open]):not(:has(> [showing="true"])) {
      margin-inline-start: calc(-10px - 2 * var(--urlbar-icon-padding));
      opacity: 0;

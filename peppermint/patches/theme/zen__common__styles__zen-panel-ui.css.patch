@@ -1,6 +1,6 @@
 --- a/zen/common/styles/zen-panel-ui.css
 +++ b/zen/common/styles/zen-panel-ui.css
-@@ -31,25 +31,44 @@
+@@ -31,24 +31,43 @@
    }
  
    @media (-moz-platform: linux) or ((-moz-platform: windows) and (not (-moz-windows-mica-popups))) {
@@ -9,7 +9,6 @@
 +    --panel-text-color: var(--zen-popup-foreground, rgb(28, 28, 30));
 +
      &::part(content) {
-       /* stylelint-disable-next-line property-no-unknown */
 -      corner-shape: round; 
 +      corner-shape: round;
        border-radius: calc(var(--panel-border-radius) / var(--zen-squircle-value));
@@ -55,7 +54,7 @@
      --panel-border-color: transparent;
  
      /* Remove the shadow for the native panels, as macos already
-@@ -60,8 +79,36 @@
+@@ -59,8 +78,36 @@
      --panel-box-shadow: none;
  
      &::part(content) {

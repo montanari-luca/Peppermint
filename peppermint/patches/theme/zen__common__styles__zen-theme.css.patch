@@ -1,6 +1,6 @@
 --- a/zen/common/styles/zen-theme.css
 +++ b/zen/common/styles/zen-theme.css
-@@ -8,13 +8,13 @@
+@@ -11,11 +11,13 @@
  :root {
    /* Default values */
    --zen-border-radius: 7px;
@@ -10,18 +10,15 @@
    --zen-background-opacity: 1;
  
    /* Branding */
--  --zen-branding-dark: #101010;
--  --zen-branding-paper: #e2e2e2;
 +  --zen-branding-dark: #0c1f1c;
 +  --zen-branding-paper: #e7f6f1;
  
    --zen-branding-bg: light-dark(var(--zen-branding-paper), var(--zen-branding-dark));
    --zen-branding-bg-reverse: light-dark(var(--zen-branding-dark), var(--zen-branding-paper));
-@@ -55,7 +55,16 @@
+@@ -56,6 +58,16 @@
      color-mix(in srgb, var(--zen-primary-color) 1%, var(--zen-branding-bg) 99%)
    );
  
--  --zen-dialog-background: light-dark(#fafbff, #1c1c1c);
 +  /* In-content panels stay on the theme hue and sit darker than the browser chrome. */
 +  --zen-panel-background: light-dark(
 +    color-mix(in oklch, var(--zen-primary-color) 62%, black),
@@ -35,7 +32,7 @@
    --zen-urlbar-background: light-dark(
      color-mix(in srgb, var(--zen-primary-color) 3%, #f4f4f4 97%),
      color-mix(in srgb, var(--zen-primary-color) 4%, rgb(24, 24, 24) 96%)
-@@ -132,11 +141,9 @@
+@@ -132,11 +144,9 @@
      transparent 20%
    ) !important;
  
@@ -48,9 +45,9 @@
 +  --background-color-canvas: var(--zen-panel-background);
 +  --zen-in-content-dialog-background: var(--zen-panel-background);
  
-   --zen-button-padding: 0.6rem 1.2rem;
  
-@@ -206,7 +213,12 @@
+   --zen-toolbar-element-bg: light-dark(
+@@ -202,7 +212,12 @@
    --zen-hidden-toolbar-transition: var(--zen-hidden-toolbar-transition-duration) ease-in-out;
  
    /* XUL */
@@ -64,7 +61,7 @@
    --zen-main-browser-background-toolbar: var(--zen-main-browser-background);
  
    --browser-area-z-index-toolbox: 2 !important;
-@@ -356,6 +368,24 @@
+@@ -349,6 +364,24 @@
    }
  }
  

@@ -1,6 +1,6 @@
 --- a/browser/components/urlbar/content/UrlbarInputBase.mjs
 +++ b/browser/components/urlbar/content/UrlbarInputBase.mjs
-@@ -2539,15 +2539,23 @@
+@@ -2627,15 +2627,23 @@
     */
    onFirstResult(queryContext) {
      let firstResult = queryContext.results[0];
@@ -28,16 +28,16 @@
          entry: "typed",
          checkValue: false,
        })
-@@ -3277,13 +3285,25 @@
+@@ -3359,13 +3367,25 @@
  
      this.toggleAttribute("breakout-extend", true);
-     this.window.gZenUIManager.onUrlbarOpen();
+     this.browserWindow.gZenUIManager.onUrlbarOpen();
 -    if (this.zenUrlbarBehavior == 'float' || (this.zenUrlbarBehavior == 'floating-on-type' && !this.focusedViaMousedown)) {
 +    // A new tab session (Cmd+T) always floats, even when the bar was last
 +    // focused with the mouse and never blurred since.
 +    if (this.zenUrlbarBehavior == 'float' || this.hasAttribute("zen-newtab") || (this.zenUrlbarBehavior == 'floating-on-type' && !this.focusedViaMousedown)) {
        this.setAttribute("zen-floating-urlbar", "true");
-       this.window.gZenUIManager.onFloatingURLBarOpen();
+       this.browserWindow.gZenUIManager.onFloatingURLBarOpen();
      } else {
        this.removeAttribute("zen-floating-urlbar");
      }
@@ -46,8 +46,8 @@
 +    // Enable the animation only after the first extend call to ensure it
 +    // doesn't run when opening a new window.
 +    if (!this.hasAttribute("popover-animate")) {
-+      promiseLayoutFlushed(this.window).then(() => {
-+        this.window.requestAnimationFrame(() => {
++      promiseLayoutFlushed(this.browserWindow).then(() => {
++        this.browserWindow.requestAnimationFrame(() => {
 +          this.toggleAttribute("popover-animate", true);
 +        });
 +      });
@@ -55,11 +55,11 @@
    }
  
    #closePopover() {
-@@ -6103,6 +6123,7 @@
+@@ -6216,6 +6236,7 @@
        options.searchMode = this.searchMode;
        if (
          this.searchMode.source &&
 +        this.searchMode.source != UrlbarShared.RESULT_SOURCE.SNIPPETS &&
-         !UrlbarPrefs.get("unifiedSearchButton.historyInSearchMode")
+         (!this.searchMode.engineName ||
+           !UrlbarPrefs.get("unifiedSearchButton.historyInSearchMode"))
        ) {
-         options.sources = [this.searchMode.source];
