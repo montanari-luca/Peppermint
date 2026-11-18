@@ -11,6 +11,7 @@ BROWSER_CHROME_MANIFESTS += [
     "cookie_consent/browser.toml",
     "feature_tour/browser.toml",
     "features/browser.toml",
+    "folder_icon/browser.toml",
     "ghost_mode/browser.toml",
     "homepage/browser.toml",
     "janitor/browser.toml",

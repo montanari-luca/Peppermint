@@ -1,0 +1,63 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Folder icon in the sidebar.
+ *
+ * Zen draws each folder as an inline SVG of two skewed folder sheets with the
+ * user's icon (or three dots) printed on the front one. Peppermint shows the
+ * platform's own folder glyph instead, the same one used everywhere else in
+ * the UI, and a folder with a custom icon shows that icon alone.
+ *
+ * Zen's SVG stays in the DOM because Zen's code reads and writes the custom
+ * icon through `svg .icon image` and the open state through attributes on the
+ * <svg>; only its drawing is hidden here. Both glyphs share one color, which
+ * follows the space accent and every theme through --zen-folder-stroke. */
+
+zen-folder > .tab-group-label-container .tab-group-folder-icon {
+  --peppermint-folder-icon-size: 16px;
+  --peppermint-folder-icon-color: color-mix(in srgb, var(--zen-folder-stroke) 50%, currentColor);
+
+  /* The default glyph, shown while no custom icon is set. */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("chrome://browser/skin/zen-icons/folder.svg") center / var(--peppermint-folder-icon-size) no-repeat;
+    -moz-context-properties: fill, fill-opacity;
+    fill: var(--peppermint-folder-icon-color);
+    fill-opacity: 1;
+  }
+
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector -- a child-only path into Zen's fixed 8-node SVG; Zen sets the icon as an href there and exposes no attribute on the folder */
+  &:has(> svg > .icon > image[href]:not([href=""]))::before {
+    display: none;
+  }
+
+  & svg {
+    /* Zen boosts contrast and nudges the sheets while they animate; both would
+     * shift and recolor a custom icon. */
+    filter: none !important;
+    transform: none !important;
+    transition: none !important;
+
+    & :is(.back, .front, .dots) {
+      display: none !important;
+    }
+
+    /* The custom icon stays upright and visible when the folder opens or holds
+     * the active tab, where Zen skews it or swaps it for dots. */
+    & .icon {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    /* Zen's <image> is 11 units wide at (8.5, 10.5) in a 27-unit view box. It
+     * is scaled to the glyph size and centered in the box. */
+    & .icon image {
+      fill: var(--peppermint-folder-icon-color);
+      fill-opacity: 1;
+      transform: translate(5.5px, 5.5px) scale(calc(16 / 11));
+    }
+  }
+}

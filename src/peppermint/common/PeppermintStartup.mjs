@@ -29,6 +29,9 @@ const SIDEBAR_STYLE_URL =
 
 const IDLE_STYLE_URL = "chrome://browser/content/zen-styles/peppermint-idle.css";
 
+const FOLDER_ICON_STYLE_URL =
+  "chrome://browser/content/zen-styles/peppermint-folder-icon.css";
+
 function loadStyle(window, href) {
   const doc = window.document;
   if (doc.querySelector(`link[href="${href}"]`)) {
@@ -67,6 +70,9 @@ export const PeppermintStartup = {
     );
     start("Peppermint sidebar styles", () =>
       loadStyle(window, SIDEBAR_STYLE_URL)
+    );
+    start("Peppermint folder icon", () =>
+      loadStyle(window, FOLDER_ICON_STYLE_URL)
     );
     start("Live folders idle", () =>
       ChromeUtils.importESModule(
