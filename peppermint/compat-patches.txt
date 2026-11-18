@@ -1,3 +1,5 @@
+src/-prettierignore.patch
+src/-stylelintrc-js.patch
 src/browser/base/content/browser-commands-js.patch
 src/browser/base/content/browser-sets-inc-xhtml.patch
 src/browser/components/contextualidentity/content/ContainerCreationPanel-mjs.patch
