@@ -10,3 +10,23 @@
 #zen-create-new-button {
   display: none !important;
 }
+
+/* The tab list scrollbar only shows while the cursor is over the sidebar. It
+ * fades in at once on enter and fades out 0.5s after the cursor leaves. Zen
+ * sets the visible color on this same part, so only the hidden state and the
+ * transitions are added here; the color keeps following each theme. */
+#navigator-toolbox zen-workspace > arrowscrollbox[overflowing]::part(scrollbox) {
+  transition: scrollbar-color 0.15s ease;
+}
+
+#navigator-toolbox:not(:hover) zen-workspace > arrowscrollbox[overflowing]::part(scrollbox) {
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease 0.5s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #navigator-toolbox zen-workspace > arrowscrollbox[overflowing]::part(scrollbox),
+  #navigator-toolbox:not(:hover) zen-workspace > arrowscrollbox[overflowing]::part(scrollbox) {
+    transition-duration: 0s;
+  }
+}
