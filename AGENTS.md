@@ -1,4 +1,5 @@
 - Suggest a clear commit message in chat after every implementation.
+- After every implementation, commit it directly on `mine` and push it (`git push origin mine`) without asking; no feature branch or PR unless asked.
 - Ensure general OS stability after every build.
 - Focus on optimization when planning. Every implementation must consider the most efficient long-term options.
 - When planning fixes, never fix a single case, focus on fixing the general/broader issue, making sure any similar issues cannot happen again.
@@ -27,7 +28,7 @@ Peppermint is a layer on top of Zen (zen-browser/desktop), which is merged in ev
 
 ## Branches and upstream merges
 
-- `mine` is the only long-lived branch and the GitHub default. Work on short-lived feature branches and open PRs into `mine`. Releases are built from `mine`.
+- `mine` is the only long-lived branch and the GitHub default. Agent work is committed and pushed straight to `mine`; other work uses short-lived feature branches and PRs into `mine`. Releases are built from `mine`.
 - Zen is merged in by `.github/workflows/sync-zen-firefox.yml` (daily) or locally with `node peppermint/scripts/sync-upstream.mjs --check-import`. It opens a PR from `sync/upstream-<date>` into `mine`.
 - Merge sync PRs with a merge commit, never squash or rebase, so git keeps track of what is already merged.
 - If the sync PR reports a failed overlay patch, Zen changed lines Peppermint edits: fix the file under `engine/`, run `npm run pm:record -- <engine path> <feature>`, and push to the sync branch.

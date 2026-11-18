@@ -26,7 +26,7 @@ Never edit a file that exists in zen-browser/desktop (except the paths in `peppe
 
 ## Branches and upstream merges
 
-- `mine` is the only long-lived branch and the GitHub default. Use short-lived feature branches and PRs into `mine`; releases build from `mine`. `dev` is unused, do not commit to it.
+- `mine` is the only long-lived branch and the GitHub default. Agent work is committed and pushed straight to `mine` (see Working rules); other work uses short-lived feature branches and PRs into `mine`; releases build from `mine`. `dev` is unused, do not commit to it.
 - `.github/workflows/sync-zen-firefox.yml` (daily) or `node peppermint/scripts/sync-upstream.mjs --check-import` merges Zen into `sync/upstream-<date>` and opens a PR into `mine`.
 - Merge sync PRs with a merge commit, never squash or rebase.
 - A failed overlay patch in a sync PR means Zen changed lines Peppermint edits: fix the file under `engine/`, run `pm:record`, push to the sync branch.
@@ -35,6 +35,7 @@ Never edit a file that exists in zen-browser/desktop (except the paths in `peppe
 ## Working rules
 
 - Suggest a clear commit message in chat after every implementation.
+- After every implementation, commit it directly on `mine` and push it (`git push origin mine`) without asking; no feature branch or PR unless asked.
 - Tell the user after every change whether a full rebuild, a UI rebuild or nothing is needed.
 - Ensure general OS stability after every build.
 - Plan for the most efficient long-term option and fix the general problem, not a single case.
