@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<?csp default-src chrome:; style-src chrome: 'unsafe-inline'; ?>
+
+<window
+  type="child"
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+  data-l10n-attrs="title"
+>
+  <dialog
+    id="syncOverrideDialog"
+    buttons="accept,cancel"
+    data-l10n-attrs="buttonlabelaccept"
+  >
+    <linkset>
+      <html:link rel="stylesheet" href="chrome://global/skin/global.css" />
+      <html:link
+        rel="stylesheet"
+        href="chrome://browser/content/peppermint-sync-override/syncOverride.css"
+      />
+      <html:link
+        rel="localization"
+        href="browser/preferences/preferences.ftl"
+      />
+      <html:link
+        rel="localization"
+        href="browser/preferences/zen-preferences.ftl"
+      />
+      <html:link
+        rel="localization"
+        href="browser/peppermint-sync-override.ftl"
+      />
+    </linkset>
+    <html:script
+      type="module"
+      src="chrome://browser/content/peppermint-sync-override/syncOverride.mjs"
+    />
+
+    <html:div class="sync-override">
+      <html:h2 id="syncOverrideHeading" class="sync-override-heading" />
+      <html:p id="syncOverrideDescription" class="sync-override-text" />
+
+      <html:div id="syncOverrideChoose" class="sync-override-choose">
+        <html:div id="syncOverrideEngines" class="sync-override-engines" />
+        <html:p
+          id="syncOverrideHistoryNote"
+          class="sync-override-text sync-override-note"
+          hidden="hidden"
+        />
+        <html:moz-message-bar
+          id="syncOverrideWarning"
+          type="warning"
+          data-l10n-attrs="message"
+        />
+      </html:div>
+
+      <html:div
+        id="syncOverrideRunning"
+        class="sync-override-running"
+        hidden="hidden"
+        role="status"
+      >
+        <html:span class="sync-override-spinner" />
+        <html:span data-l10n-id="peppermint-sync-override-running" />
+      </html:div>
+
+      <html:ul
+        id="syncOverrideResult"
+        class="sync-override-result"
+        hidden="hidden"
+        role="status"
+      />
+    </html:div>
+  </dialog>
+</window>

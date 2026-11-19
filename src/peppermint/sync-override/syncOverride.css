@@ -1,0 +1,95 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.sync-override {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium);
+  max-width: 32em;
+}
+
+.sync-override-heading {
+  margin: 0;
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+}
+
+.sync-override-text {
+  margin: 0;
+}
+
+.sync-override-note {
+  color: var(--text-color-deemphasized);
+  font-size: var(--font-size-small);
+}
+
+.sync-override-choose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.sync-override-engines {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xsmall) var(--space-large);
+}
+
+.sync-override-running {
+  display: flex;
+  align-items: center;
+  gap: var(--space-small);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.sync-override-spinner {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  background: url("chrome://global/skin/icons/loading.svg") center / contain
+    no-repeat;
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+
+.sync-override-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-small);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &[hidden] {
+    display: none;
+  }
+
+  & > li {
+    padding-inline-start: calc(var(--icon-size) + var(--space-small));
+    background: url("chrome://global/skin/icons/check.svg") left center /
+      var(--icon-size) no-repeat;
+    -moz-context-properties: fill;
+    fill: var(--icon-color-success);
+
+    &:dir(rtl) {
+      background-position-x: right;
+    }
+  }
+
+  & > .sync-override-result-skipped {
+    background-image: url("chrome://global/skin/icons/info.svg");
+    fill: var(--icon-color-information);
+  }
+
+  & > .sync-override-result-failed {
+    background-image: url("chrome://global/skin/icons/warning.svg");
+    fill: var(--icon-color-warning);
+  }
+}

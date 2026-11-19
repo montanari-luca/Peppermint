@@ -190,6 +190,11 @@ export const PeppermintStartup = {
         "moz-src:///peppermint/vault/PeppermintPermissionAutoRevoke.sys.mjs"
       ).PeppermintPermissionAutoRevoke.start()
     );
+    start("PeppermintSyncOverride", () =>
+      ChromeUtils.importESModule(
+        "moz-src:///peppermint/sync-override/PeppermintSyncOverride.sys.mjs"
+      ).PeppermintSyncOverride.initWindow(window)
+    );
     start("PeppermintFeatureTour", () =>
       ChromeUtils.importESModule(
         "moz-src:///peppermint/feature-tour/PeppermintFeatureTour.sys.mjs"

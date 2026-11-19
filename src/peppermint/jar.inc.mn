@@ -20,3 +20,4 @@
 #include about/jar.inc.mn
 #include features/jar.inc.mn
 #include shortcut-sheet/jar.inc.mn
+#include sync-override/jar.inc.mn

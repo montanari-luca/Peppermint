@@ -27,6 +27,7 @@ DIRS += [
     "shortcut-tooltips",
     "site-privacy",
     "startup-doctor",
+    "sync-override",
     "tab-archive",
     "tab-close-confirm",
     "tab-islands",

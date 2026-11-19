@@ -9,3 +9,18 @@
  #endif
                       />
        <toolbarbutton id="appMenu-more-button2"
+@@ -736,6 +738,14 @@
+                    crop="end"/>
+           </vbox>
+         </toolbarbutton>
++        <toolbarbutton id="PanelUI-fxa-menu-rebase-sync-button"
++                       class="subviewbutton"
++                       data-l10n-id="peppermint-sync-override-panel-rebase"
++                       hidden="true"/>
++        <toolbarbutton id="PanelUI-fxa-menu-push-sync-button"
++                       class="subviewbutton"
++                       data-l10n-id="peppermint-sync-override-panel-push"
++                       hidden="true"/>
+         <toolbarbutton id="PanelUI-fxa-menu-get-firefox-mobile"
+                        class="subviewbutton subviewbutton-iconic"
+                        data-l10n-id="fxa-menu-get-firefox-mobile"

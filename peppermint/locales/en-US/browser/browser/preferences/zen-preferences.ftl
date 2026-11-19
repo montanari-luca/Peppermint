@@ -433,6 +433,15 @@ sync-engine-notes =
     .tooltiptext = Sync your notes across devices
     .accesskey = N
 
+## Rebase Sync and Push Sync, in the Sync settings
+
+peppermint-sync-override-settings-rebase =
+    .label = Rebase from Sync…
+    .description = Make this device match your account and discard its unsynced changes
+peppermint-sync-override-settings-push =
+    .label = Push to Sync…
+    .description = Make your account match this device; other devices follow on their next sync
+
 pane-zen-ghost-mode-title = Ghost Mode
 
 category-zen-ghost-mode =

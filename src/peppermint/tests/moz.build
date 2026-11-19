@@ -29,6 +29,7 @@ BROWSER_CHROME_MANIFESTS += [
     "shortcut_tooltips/browser.toml",
     "site_privacy/browser.toml",
     "startup_doctor/browser.toml",
+    "sync_override/browser.toml",
     "tab_archive/browser.toml",
     "tab_close_confirm/browser.toml",
     "tab_islands/browser.toml",

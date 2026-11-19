@@ -1,6 +1,15 @@
 --- a/browser/components/preferences/config/account-sync.mjs
 +++ b/browser/components/preferences/config/account-sync.mjs
-@@ -47,6 +47,7 @@
+@@ -31,6 +31,8 @@
+ const lazy = XPCOMUtils.declareLazy({
+   BackupService: "moz-src:///browser/components/backup/BackupService.sys.mjs",
+   Weave: "resource://services-sync/main.sys.mjs",
++  PeppermintSyncOverride:
++    "moz-src:///peppermint/sync-override/PeppermintSyncOverride.sys.mjs",
+ 
+   SelectableProfileService:
+     "resource:///modules/profiles/SelectableProfileService.sys.mjs",
+@@ -47,6 +49,7 @@
    { id: "services.sync.engine.addons", type: "bool" },
    { id: "services.sync.engine.prefs", type: "bool" },
    { id: "services.sync.engine.spaces", type: "bool" },
@@ -8,7 +17,7 @@
    { id: "zen.spaces-sync.normal-tabs", type: "bool" },
  ]);
  
-@@ -564,6 +565,7 @@
+@@ -564,6 +567,7 @@
    },
    { id: "syncAddons", pref: "services.sync.engine.addons", type: "addons" },
    { id: "syncSpaces", pref: "services.sync.engine.spaces", type: "workspaces" },
@@ -16,3 +25,49 @@
    { id: "syncSettings", pref: "services.sync.engine.prefs", type: "settings" },
  ];
  
+@@ -624,6 +628,26 @@
+     SyncHelpers.disconnectSync();
+   },
+ });
++
++for (const [id, mode] of [
++  ["peppermintRebaseSync", "rebase"],
++  ["peppermintPushSync", "push"],
++]) {
++  Preferences.addSetting({
++    id,
++    deps: ["uiStateUpdate"],
++    setup(emitChange) {
++      Services.obs.addObserver(emitChange, "peppermint-sync-override");
++      return () =>
++        Services.obs.removeObserver(emitChange, "peppermint-sync-override");
++    },
++    disabled: () =>
++      SyncHelpers.uiState.syncing || lazy.PeppermintSyncOverride.running,
++    onUserClick: () => {
++      lazy.PeppermintSyncOverride.openDialog(window, mode);
++    },
++  });
++}
+ 
+ // Sync section - Device name
+ Preferences.addSetting({
+@@ -1042,8 +1066,18 @@
+             id: "syncChangeOptions",
+             control: "moz-box-button",
+             l10nId: "sync-manage-options-2",
++          },
++          {
++            id: "peppermintRebaseSync",
++            control: "moz-box-button",
++            l10nId: "peppermint-sync-override-settings-rebase",
+           },
+           {
++            id: "peppermintPushSync",
++            control: "moz-box-button",
++            l10nId: "peppermint-sync-override-settings-push",
++          },
++          {
+             id: "syncDisconnect",
+             control: "moz-box-button",
+             l10nId: "settings-sync-disconnect-button",
