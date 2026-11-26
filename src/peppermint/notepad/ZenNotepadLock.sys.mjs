@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { setTimeout } from "resource://gre/modules/Timer.sys.mjs";
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 import { parseNoteURL } from "resource:///modules/zen/notepad/ZenNotepadMarkdown.mjs";
 import {
@@ -10,6 +11,14 @@ import {
   pendingSaveCount,
   waitForPendingSaves,
 } from "resource:///modules/zen/notepad/ZenNotepadStore.sys.mjs";
+
+const lazy = {};
+XPCOMUtils.defineLazyServiceGetter(
+  lazy,
+  "idleService",
+  "@mozilla.org/widget/useridleservice;1",
+  Ci.nsIUserIdleService
+);
 
 const PREF = "zen.notepad.auto-lock-minutes";
 const SAVE_CAP_MS = 2000;
@@ -121,13 +130,13 @@ class ZenNotepadLockImpl {
     Services.obs.addObserver(this, "sleep_notification");
     this.#watchingSleep = true;
     this.#idleSeconds = minutes * 60;
-    Services.idle.addIdleObserver(this, this.#idleSeconds);
+    lazy.idleService.addIdleObserver(this, this.#idleSeconds);
   }
 
   #disarm() {
     if (this.#idleSeconds) {
       try {
-        Services.idle.removeIdleObserver(this, this.#idleSeconds);
+        lazy.idleService.removeIdleObserver(this, this.#idleSeconds);
       } catch (error) {
         console.error("ZenNotepadLock could not remove idle observer", error);
       }

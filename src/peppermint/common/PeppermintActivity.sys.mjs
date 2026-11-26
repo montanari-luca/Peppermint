@@ -11,6 +11,16 @@
  * machine sleeps. It turns active again on the first focus or input.
  */
 
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+
+const lazy = {};
+XPCOMUtils.defineLazyServiceGetter(
+  lazy,
+  "idleService",
+  "@mozilla.org/widget/useridleservice;1",
+  Ci.nsIUserIdleService
+);
+
 const IDLE_SECONDS = 60;
 // Alt-tabbing away and straight back must not stop and restart everything.
 const BLUR_GRACE_MS = 15000;
@@ -81,7 +91,7 @@ class PeppermintActivityImpl {
       return;
     }
     this.#started = true;
-    Services.idle.addIdleObserver(this, IDLE_SECONDS);
+    lazy.idleService.addIdleObserver(this, IDLE_SECONDS);
     Services.obs.addObserver(this, SLEEP_TOPIC);
     Services.obs.addObserver(this, WAKE_TOPIC);
     Services.obs.addObserver(this, QUIT_TOPIC);
@@ -90,7 +100,7 @@ class PeppermintActivityImpl {
   #stop() {
     this.#started = false;
     this.#clearBlurTimer();
-    Services.idle.removeIdleObserver(this, IDLE_SECONDS);
+    lazy.idleService.removeIdleObserver(this, IDLE_SECONDS);
     Services.obs.removeObserver(this, SLEEP_TOPIC);
     Services.obs.removeObserver(this, WAKE_TOPIC);
     Services.obs.removeObserver(this, QUIT_TOPIC);

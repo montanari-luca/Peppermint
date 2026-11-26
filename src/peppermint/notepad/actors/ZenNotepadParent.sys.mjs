@@ -192,10 +192,7 @@ export function watchMintDocuments(win) {
       onContentBlockingEvent() {},
     };
     win.__mintNotepadListener = listener;
-    win.gBrowser.addProgressListener(
-      listener,
-      Ci.nsIWebProgress.NOTIFY_STATE_WINDOW | Ci.nsIWebProgress.NOTIFY_LOCATION
-    );
+    win.gBrowser.addProgressListener(listener);
     win.addEventListener(
       "unload",
       () => {
