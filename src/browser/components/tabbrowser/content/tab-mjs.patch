@@ -128,15 +128,17 @@
      // If the previous target wasn't part of this tab then this is a mouseenter event.
      if (!this.contains(event.relatedTarget)) {
        this._mouseenter();
-@@ -550,6 +581,7 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -550,6 +581,9 @@ export class MozTabbrowserTab extends MozElements.MozTab {
      if (!this.contains(event.relatedTarget)) {
        this._mouseleave();
      }
-+      gZenPinnedTabManager.onResetPinButtonMouseOut(this);
++      if (event.target.classList.contains("tab-reset-pin-button")) {
++        gZenPinnedTabManager.onResetPinButtonMouseOut(this);
++      }
    }
  
    on_dragstart(event) {
-@@ -561,6 +593,7 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -561,6 +595,7 @@ export class MozTabbrowserTab extends MozElements.MozTab {
      if (event.eventPhase == Event.CAPTURING_PHASE) {
        this.style.MozUserFocus = "";
      } else if (
@@ -144,7 +146,7 @@
        event.target.classList?.contains("tab-close-button") ||
        gSharedTabWarning.willShowSharedTabWarning(this)
      ) {
-@@ -584,6 +617,8 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -584,6 +619,8 @@ export class MozTabbrowserTab extends MozElements.MozTab {
        this.style.MozUserFocus = "ignore";
      } else if (
        event.target.classList.contains("tab-close-button") ||
@@ -153,7 +155,7 @@
        event.target.classList.contains("tab-icon-overlay") ||
        event.target.classList.contains("tab-audio-button")
      ) {
-@@ -618,7 +653,7 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -618,7 +655,7 @@ export class MozTabbrowserTab extends MozElements.MozTab {
          }
        } else if (
          event.altKey &&
@@ -162,7 +164,7 @@
        ) {
          eventMaySelectTab = false;
        } else if (!this.selected && this.multiselected) {
-@@ -655,6 +690,10 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -655,6 +692,10 @@ export class MozTabbrowserTab extends MozElements.MozTab {
      this.style.MozUserFocus = "";
    }
  
@@ -173,7 +175,7 @@
    on_click(event) {
      if (event.button != 0) {
        return;
-@@ -678,14 +717,31 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -678,14 +719,31 @@ export class MozTabbrowserTab extends MozElements.MozTab {
            trigger: "alt_click",
          });
        }
@@ -206,7 +208,7 @@
        gBrowser.multiSelectedTabsCount > 0 &&
        !event.target.classList.contains("tab-close-button") &&
        !event.target.classList.contains("tab-icon-overlay") &&
-@@ -697,8 +753,9 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -697,8 +755,9 @@ export class MozTabbrowserTab extends MozElements.MozTab {
      }
  
      if (
@@ -218,7 +220,7 @@
      ) {
        if (this.activeMediaBlocked) {
          if (this.multiselected) {
-@@ -716,7 +773,7 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -716,7 +775,7 @@ export class MozTabbrowserTab extends MozElements.MozTab {
        return;
      }
  
@@ -227,7 +229,7 @@
        if (this.multiselected) {
          gBrowser.removeMultiSelectedTabs({
            metricsContext: lazy.TabMetrics.userTriggeredContext(
-@@ -736,6 +793,14 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -736,6 +795,14 @@ export class MozTabbrowserTab extends MozElements.MozTab {
        // (see tabbrowser-tabs 'click' handler).
        gBrowser.tabContainer._blockDblClick = true;
      }
@@ -242,7 +244,7 @@
    }
  
    on_dblclick(event) {
-@@ -762,6 +827,8 @@ export class MozTabbrowserTab extends MozElements.MozTab {
+@@ -762,6 +829,8 @@ export class MozTabbrowserTab extends MozElements.MozTab {
            lazy.TabMetrics.METRIC_SOURCE.TAB_STRIP
          ),
        });
