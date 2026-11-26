@@ -1,0 +1,29 @@
+--- a/zen/common/actors/ZenContentHandlerChild.sys.mjs
++++ b/zen/common/actors/ZenContentHandlerChild.sys.mjs
+@@ -83,8 +83,12 @@
+     // Get the largest element we can get. If the `A` element
+     // is a parent of the original target, use the anchor element,
+     // otherwise use the original target.
+-    let rect = node.getBoundingClientRect();
+-    const originalTargetRect = originalTarget.getBoundingClientRect();
++    // The click already laid the page out, so reading the boxes must not
++    // force another layout flush.
++    const { windowUtils } = this.contentWindow;
++    let rect = windowUtils.getBoundsWithoutFlushing(node);
++    const originalTargetRect =
++      windowUtils.getBoundsWithoutFlushing(originalTarget);
+     if (
+       originalTargetRect.width * originalTargetRect.height >
+       rect.width * rect.height
+@@ -139,6 +143,11 @@
+   }
+ 
+   on_mousedown(event) {
++    // Only a left or middle click can open a link; a right click opens the
++    // context menu.
++    if (event.button > 1) {
++      return;
++    }
+     const { node } = this.#getTargetFromEvent(event);
+     // We record the link data anyway, even if the glance may be invoked
+     // or not. We have some cases where glance would open, for example,

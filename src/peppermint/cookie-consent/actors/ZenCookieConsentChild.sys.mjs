@@ -23,6 +23,20 @@ const IDLE_TIMEOUT_MS = 300;
 const LATE_BATCH_MS = 400;
 const LATE_BATCH_NODES = 100;
 const MAX_LATE_ACTIVATIONS = 6;
+// Late banners show up within the first minute or so of a page. After that,
+// and while the page is hidden, the page is no longer watched.
+const LATE_WATCH_MS = 60000;
+let gLateWatchMs = LATE_WATCH_MS;
+
+/**
+ * Test hook, in the content process of the page under test.
+ *
+ * @param {number|null} ms - How long a page is watched for late banners;
+ *   null for the default
+ */
+export function setLateWatchForTests(ms) {
+  gLateWatchMs = ms ?? LATE_WATCH_MS;
+}
 
 export class ZenCookieConsentChild extends JSWindowActorChild {
   #destroyed = false;
@@ -41,6 +55,11 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
   #lateNodes = [];
   #lateTimer = null;
   #lateActivations = 0;
+  #startedAt = 0;
+  #lateDeadline = null;
+  #pageWatched = null;
+  #lateObserverPaused = false;
+  #lateExpired = false;
 
   handleEvent(event) {
     if (event.type !== "DOMContentLoaded" && event.type !== "pageshow") {
@@ -83,9 +102,12 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
     }
     this.#clearTimers();
     this.#stopLate();
+    this.#unwatchPage();
     this.#observer?.disconnect();
     this.#observer = null;
     this.#lateActivations = 0;
+    this.#startedAt = Date.now();
+    this.#lateExpired = false;
     this.#doc = doc;
     this.#done = false;
     this.#allowed = null;
@@ -167,6 +189,8 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
    * Banners live in the top document. Subframes only run for hosts that
    * embed a known consent manager, so ordinary ad and widget frames do not
    * start the scanner.
+   *
+   * @param doc
    */
   #frameShouldRun(doc) {
     if (this.#isTopFrame()) {
@@ -255,7 +279,9 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
     }
     if (this.#allowed === null) {
       try {
-        const result = await this.sendQuery("ZenCookieConsent:ShouldRun", { url });
+        const result = await this.sendQuery("ZenCookieConsent:ShouldRun", {
+          url,
+        });
         this.#allowed = !!result?.run;
       } catch {
         this.#finish();
@@ -293,7 +319,10 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
     }
     if (decision.action === "click") {
       if (decision.step != null) {
-        decision.root?.setAttribute("data-zen-cookie-step", String(decision.step));
+        decision.root?.setAttribute(
+          "data-zen-cookie-step",
+          String(decision.step)
+        );
       }
       this.#activate(decision.control);
       if (decision.final) {
@@ -314,7 +343,10 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
       this.#schedule(400);
       return;
     }
-    if (decision.rejected || decision.root?.getAttribute("data-zen-cookie-handled") === "clicked") {
+    if (
+      decision.rejected ||
+      decision.root?.getAttribute("data-zen-cookie-handled") === "clicked"
+    ) {
       hideConsent(doc, decision.root);
       this.#reportHandled();
     }
@@ -339,11 +371,10 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
     }
     try {
       if (control.localName === "a") {
-        control.addEventListener(
-          "click",
-          event => event.preventDefault(),
-          { capture: true, once: true }
-        );
+        control.addEventListener("click", event => event.preventDefault(), {
+          capture: true,
+          once: true,
+        });
       }
       control.click();
     } catch {
@@ -363,14 +394,86 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
       keepWatching &&
       this.#observer &&
       !this.#destroyed &&
+      !this.#lateExpired &&
       this.#lateActivations < MAX_LATE_ACTIVATIONS
     ) {
       this.#late = true;
+      this.#armLateDeadline();
       return;
     }
     this.#stopLate();
+    this.#unwatchPage();
     this.#observer?.disconnect();
     this.#observer = null;
+  }
+
+  #armLateDeadline() {
+    const win = this.contentWindow;
+    if (!win) {
+      return;
+    }
+    if (!this.#lateDeadline) {
+      const remaining = this.#startedAt + gLateWatchMs - Date.now();
+      if (remaining <= 0) {
+        this.#endLate();
+        return;
+      }
+      // A banner being handled right now is let finish first.
+      const timer = win.setTimeout(() => {
+        this.#lateExpired = true;
+        if (this.#late) {
+          this.#finish();
+        }
+      }, remaining);
+      this.#lateDeadline = () => win.clearTimeout(timer);
+    }
+    if (!this.#pageWatched) {
+      const onVisibility = () => this.#syncLateObserver();
+      const onPageHide = () => this.#endLate();
+      win.addEventListener("visibilitychange", onVisibility);
+      win.addEventListener("pagehide", onPageHide);
+      this.#pageWatched = () => {
+        win.removeEventListener("visibilitychange", onVisibility);
+        win.removeEventListener("pagehide", onPageHide);
+      };
+    }
+    this.#syncLateObserver();
+  }
+
+  // A hidden page is not watched; a banner added meanwhile is found by the
+  // next mutation once the page is shown again.
+  #syncLateObserver() {
+    const doc = this.document;
+    if (!this.#late || !this.#observer || !doc?.documentElement) {
+      return;
+    }
+    if (doc.hidden && !this.#lateObserverPaused) {
+      this.#observer.disconnect();
+      this.#lateObserverPaused = true;
+    } else if (!doc.hidden && this.#lateObserverPaused) {
+      this.#observer.observe(doc.documentElement, {
+        childList: true,
+        subtree: true,
+      });
+      this.#lateObserverPaused = false;
+    }
+  }
+
+  #endLate() {
+    this.#lateExpired = true;
+    this.#finish();
+  }
+
+  #unwatchPage() {
+    try {
+      this.#lateDeadline?.();
+      this.#pageWatched?.();
+    } catch {
+      // The window may already be gone.
+    }
+    this.#lateDeadline = null;
+    this.#pageWatched = null;
+    this.#lateObserverPaused = false;
   }
 
   #stopLate() {
@@ -399,7 +502,10 @@ export class ZenCookieConsentChild extends JSWindowActorChild {
     }
     const win = this.contentWindow;
     if (win) {
-      this.#lateTimer = win.setTimeout(() => this.#processLate(), LATE_BATCH_MS);
+      this.#lateTimer = win.setTimeout(
+        () => this.#processLate(),
+        LATE_BATCH_MS
+      );
     }
   }
 

@@ -187,3 +187,43 @@ add_task(async function test_banner_that_appears_late_is_still_refused() {
     BrowserTestUtils.removeTab(tab);
   }
 });
+
+add_task(async function test_page_is_not_watched_after_the_late_window() {
+  const before = gZenCookieConsent.handledTotal;
+  const tab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    `${base}/late`
+  );
+  try {
+    // The banner of this page shows up after about 9.5 s; watching it for
+    // less than that leaves it alone.
+    await SpecialPowers.spawn(tab.linkedBrowser, [], () => {
+      ChromeUtils.importESModule(
+        "resource:///actors/ZenCookieConsentChild.sys.mjs"
+      ).setLateWatchForTests(1000);
+    });
+    await TestUtils.waitForCondition(
+      () =>
+        SpecialPowers.spawn(
+          tab.linkedBrowser,
+          [],
+          () => !!content.document.getElementById("banner")
+        ),
+      "the late banner shows up",
+      250,
+      120
+    );
+    // Give a watcher, if any were left, time to act on it.
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const state = await bannerState(tab.linkedBrowser);
+    Assert.equal(state.reject, 0, "the banner is not refused");
+    Assert.equal(gZenCookieConsent.handledTotal, before, "nothing is counted");
+  } finally {
+    await SpecialPowers.spawn(tab.linkedBrowser, [], () => {
+      ChromeUtils.importESModule(
+        "resource:///actors/ZenCookieConsentChild.sys.mjs"
+      ).setLateWatchForTests(null);
+    });
+    BrowserTestUtils.removeTab(tab);
+  }
+});
