@@ -52,18 +52,21 @@
        let tab = gZenUIManager.openAndChangeToTab(newTabUrl);
  
        // Set workspace ID if available
-@@ -327,6 +332,10 @@
+@@ -327,6 +332,13 @@
      );
    }
  
 +  get spaceSwitchAnimationEnabled() {
-+    return Services.prefs.getBoolPref("zen.workspaces.switch-animation", true);
++    return (
++      !gReduceMotion &&
++      Services.prefs.getBoolPref("zen.workspaces.switch-animation", true)
++    );
 +  }
 +
    get shouldAnimateEssentials() {
      return this.containerSpecificEssentials || !!this.creatingWorkspaceId;
    }
-@@ -364,6 +373,7 @@
+@@ -364,6 +376,7 @@
      if (markupTabs.length) {
        gBrowser.tabContainer._invalidateCachedTabs();
      }
@@ -71,7 +74,7 @@
      for (const workspace of workspaces) {
        this.workspaceElement(workspace.uuid)?.checkPinsExistence();
      }
-@@ -498,15 +508,28 @@
+@@ -498,15 +511,28 @@
      workspaceWrapper.checkPinsExistence();
    }
  
@@ -108,7 +111,7 @@
      const getFolderRoot = tab => {
        let root = tab?.group;
        while (root?.group) {
-@@ -514,32 +537,48 @@
+@@ -514,31 +540,47 @@
        }
        return root || tab;
      };
@@ -150,8 +153,8 @@
        } else {
 -        section.insertBefore(tab, section.firstChild);
 +        unpinned.push(node);
-       }
-     }
++      }
++    }
 +    if (removed.size) {
 +      const kept = tabs.filter(tab => !removed.has(tab));
 +      tabs.length = 0;
@@ -168,13 +171,12 @@
 +      const fragment = document.createDocumentFragment();
 +      for (const node of unpinned) {
 +        fragment.appendChild(node);
-+      }
+       }
 +      section.prepend(fragment);
-+    }
+     }
    }
  
-   /** @type {Map<Element, DocumentFragment>|null} */
-@@ -935,7 +974,7 @@
+@@ -935,7 +977,7 @@
      this.activeWorkspace = activeWorkspace?.uuid;
      try {
        if (activeWorkspace) {
@@ -183,7 +185,7 @@
          gZenThemePicker.onWorkspaceChange(activeWorkspace);
        }
      } catch (e) {
-@@ -963,9 +1002,16 @@
+@@ -963,9 +1005,16 @@
      this.#fixTabPositions();
      this.onWindowResize();
  
@@ -201,7 +203,7 @@
      window.addEventListener("TabAddedToEssentials", tabUpdateListener);
      window.addEventListener("TabRemovedFromEssentials", tabUpdateListener);
      window.addEventListener("TabPinned", tabUpdateListener);
-@@ -1908,6 +1954,7 @@
+@@ -1908,6 +1957,7 @@
        }
      }
      gBrowser.tabContainer._invalidateCachedTabs();
@@ -209,7 +211,7 @@
      return true;
    }
  
-@@ -2012,7 +2059,10 @@
+@@ -2012,7 +2062,10 @@
    }
  
    _cancelSwipeAnimation() {
@@ -221,7 +223,7 @@
    }
  
    async #performWorkspaceChange(
-@@ -2749,7 +2799,7 @@
+@@ -2749,7 +2802,7 @@
      this.workspaceIcons.activeIndex = workspace.uuid;
      await this.#animateTabs(
        workspace,
@@ -230,7 +232,7 @@
        tabToSelect,
        {
          previousWorkspaceIndex,
-@@ -2907,16 +2957,22 @@
+@@ -2907,16 +2960,22 @@
        let label =
          ContextualIdentityService.getUserContextLabel(containerTabId) ||
          "Default";
@@ -239,13 +241,13 @@
        if (this.isPrivateWindow) {
          icon = "chrome://browser/skin/zen-icons/private-window-small.svg";
        }
-+    }
+     }
 +    let theme = null;
 +    try {
 +      theme = lazy.nsZenThemePicker.getTheme();
 +    } catch (error) {
 +      console.error("gZenWorkspaces: Error reading the default theme", error);
-     }
++    }
      let workspace = {
        uuid: gZenUIManager.generateUuidv4(),
        icon,
@@ -255,7 +257,7 @@
        containerTabId,
      };
      return workspace;
-@@ -3011,14 +3067,21 @@
+@@ -3011,14 +3070,21 @@
  
    #allPinnedContainers() {
      const containers = [];
@@ -284,7 +286,7 @@
      return containers.length ? containers : [this.pinnedTabsContainer];
    }
  
-@@ -3196,6 +3259,7 @@
+@@ -3196,6 +3262,7 @@
        isEmpty
      );
      document.documentElement.setAttribute("zen-has-empty-tab", isEmpty);
@@ -292,7 +294,7 @@
    }
  
    async onLocationChange(event) {
-@@ -3472,6 +3536,24 @@
+@@ -3472,6 +3539,24 @@
    }
  
    // Session restore functions
@@ -317,7 +319,7 @@
    get allStoredTabs() {
      if (this._allStoredTabs) {
        return this._allStoredTabs;
-@@ -3759,6 +3841,7 @@
+@@ -3759,6 +3844,7 @@
          pinnedContainer.insertBefore(tab, pinnedContainer.lastChild);
        }
      }

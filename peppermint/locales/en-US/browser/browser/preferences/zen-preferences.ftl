@@ -313,7 +313,7 @@ zen-performance-essentials-favicon =
 
 zen-tab-unloader-minutes-label = Unload idle tabs after
 
-zen-tab-unloader-minutes-description = Minutes. Pinned tabs, essentials, the tab you are viewing, and tabs playing sound stay loaded.
+zen-tab-unloader-minutes-description = Minutes. Pinned tabs, essentials, the tab you are viewing, tabs playing sound, and tabs using the camera, microphone or screen stay loaded.
 
 peppermint-tab-archive-hours-label = Archive idle tabs after
 
@@ -641,7 +641,7 @@ peppermint-feature-janitor-description = Clears old temporary files and caches o
 peppermint-feature-janitor-keywords = disk space, cleanup, cache, storage, trash
 
 peppermint-feature-underpowered = Underpowered Mode
-peppermint-feature-underpowered-description = Freezes background tabs while the computer is struggling.
+peppermint-feature-underpowered-description = Freezes background tabs and turns off blur and motion effects while the computer is struggling.
 peppermint-feature-underpowered-keywords = battery, slow, cpu, performance, power saving
 
 peppermint-feature-startup-doctor = Startup Doctor

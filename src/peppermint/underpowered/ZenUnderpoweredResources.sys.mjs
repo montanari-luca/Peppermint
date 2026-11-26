@@ -13,7 +13,9 @@ const WORKER_URL =
 
 /** CPU or RAM at or above this percent counts as very high. */
 export const HIGH_PERCENT = 90;
-export const SAMPLE_INTERVAL_MS = 10000;
+// Memory pressure also arrives from the system as it happens (see
+// ZenUnderpowered), so a slow sample is enough to catch a busy CPU.
+export const SAMPLE_INTERVAL_MS = 30000;
 /** While the readings cannot change anything, they are taken this rarely. */
 export const SLOW_SAMPLE_INTERVAL_MS = 60000;
 // A page load can pin the CPU for a moment. Only a sustained peak (about 30

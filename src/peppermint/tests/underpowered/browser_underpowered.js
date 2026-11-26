@@ -14,6 +14,16 @@ const { ZenUnderpowered } = ChromeUtils.importESModule(
   "moz-src:///peppermint/underpowered/ZenUnderpowered.sys.mjs"
 );
 const TUNED_PREF = "image.animation_mode";
+const ZEN_EFFECT_PREFS = [
+  "zen.theme.glass",
+  "zen.workspaces.switch-animation",
+  "zen.view.compact.animate-sidebar",
+  "zen.downloads.download-animation",
+  "zen.theme.essentials-favicon-bg",
+  ...(AppConstants.platform == "macosx"
+    ? ["zen.widget.macos.window-vibrancy"]
+    : []),
+];
 const FOOT_BUTTONS = "zen-sidebar-foot-buttons";
 
 function button() {
@@ -108,6 +118,13 @@ add_task(async function test_freeze_switch_and_restore() {
     "The window is marked underpowered"
   );
   is(Services.prefs.getStringPref(TUNED_PREF), "none", "The pref is tuned");
+  for (const pref of ZEN_EFFECT_PREFS) {
+    is(Services.prefs.getBoolPref(pref), false, `${pref} is off`);
+  }
+  await TestUtils.waitForCondition(
+    () => !gZenWorkspaces.spaceSwitchAnimationEnabled,
+    "Reduced motion stops the space switch animation"
+  );
   ok(
     Services.prefs.prefHasUserValue(PREF_SAVED),
     "The original prefs are saved"
@@ -151,6 +168,9 @@ add_task(async function test_freeze_switch_and_restore() {
     hadUserValue,
     "The pref is back on the branch it came from"
   );
+  for (const pref of ZEN_EFFECT_PREFS) {
+    ok(!Services.prefs.prefHasUserValue(pref), `${pref} is back to default`);
+  }
   ok(
     !Services.prefs.prefHasUserValue(PREF_SAVED),
     "The saved prefs are cleared"

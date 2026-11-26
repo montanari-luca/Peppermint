@@ -9,6 +9,7 @@ import {
   isUnloadSafe,
   parseHostList,
 } from "moz-src:///peppermint/common/PeppermintTabs.sys.mjs";
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 import { ResourceMonitor } from "moz-src:///peppermint/underpowered/ZenUnderpoweredResources.sys.mjs";
 
 const lazy = {};
@@ -55,6 +56,20 @@ const LIMITS = {
   "layout.frame_rate": 30,
   "ui.prefersReducedMotion": 1,
   "browser.sessionstore.interval": 120000,
+  // Zen's own effects: the glass blurs, the space switch, the compact
+  // sidebar slide, the download arc and the blurred essentials backdrop.
+  "zen.theme.glass": false,
+  "zen.workspaces.switch-animation": false,
+  "zen.view.compact.animate-sidebar": false,
+  "zen.downloads.download-animation": false,
+  "zen.theme.essentials-favicon-bg": false,
+  // Pages kept warm for a quick switch back cost memory and CPU.
+  "browser.tabs.remote.warmup.enabled": false,
+  "browser.sessionhistory.max_total_viewers": 0,
+  // The live blur behind the whole window.
+  ...(AppConstants.platform == "macosx"
+    ? { "zen.widget.macos.window-vibrancy": false }
+    : {}),
 };
 
 /**
