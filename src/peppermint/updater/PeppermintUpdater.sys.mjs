@@ -240,7 +240,29 @@ class Updater {
     }
     this.#started = true;
     this.cleanupInstalled().catch(console.error);
-    this.#scheduleCheck(STARTUP_DELAY_MS);
+    this.#scheduleCheck(this.firstCheckDelay());
+  }
+
+  /**
+   * A launch soon after the last check waits for the rest of the interval
+   * instead of checking again.
+   *
+   * @param {number} [now]
+   * @returns {number} Milliseconds until the first check of this launch
+   */
+  firstCheckDelay(now = Date.now()) {
+    const lastMs = Services.prefs.getIntPref(PREF_LAST_CHECK, 0) * 1000;
+    const due = lastMs + this.#intervalMs - now;
+    return Math.min(this.#intervalMs, Math.max(STARTUP_DELAY_MS, due));
+  }
+
+  get #intervalMs() {
+    return (
+      Math.max(
+        Services.prefs.getIntPref(PREF_INTERVAL, 21600),
+        MIN_INTERVAL_SECONDS
+      ) * 1000
+    );
   }
 
   /** Checks now. Concurrent calls share one check. */
@@ -258,11 +280,7 @@ class Updater {
     lazy.clearTimeout(this.#timer);
     this.#timer = lazy.setTimeout(async () => {
       await this.checkNow();
-      const seconds = Math.max(
-        Services.prefs.getIntPref(PREF_INTERVAL, 21600),
-        MIN_INTERVAL_SECONDS
-      );
-      this.#scheduleCheck(seconds * 1000);
+      this.#scheduleCheck(this.#intervalMs);
     }, delayMs);
   }
 

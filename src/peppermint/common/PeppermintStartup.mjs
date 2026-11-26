@@ -301,6 +301,19 @@ const FEATURES = [
         "moz-src:///peppermint/janitor/PeppermintJanitor.sys.mjs"
       ).PeppermintJanitor.init(win),
   },
+  // Ready before the first link anyone types or clicks, built in slices.
+  {
+    name: "Lookalike index",
+    phase: IDLE,
+    when: () => boolPref("peppermint.lookalike.enabled", true),
+    run: () => {
+      load("moz-src:///peppermint/lookalike/PeppermintLookalikeDomains.sys.mjs")
+        .prepareLookalikeIndex()
+        .catch(error =>
+          console.error("The lookalike index could not be built", error)
+        );
+    },
+  },
   {
     name: "PeppermintPermissionAutoRevoke",
     phase: IDLE,

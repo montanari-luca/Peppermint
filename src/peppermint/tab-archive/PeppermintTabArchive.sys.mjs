@@ -27,6 +27,7 @@ import { showToast } from "moz-src:///peppermint/palette/PeppermintPaletteAction
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  PeppermintActivity: "moz-src:///peppermint/common/PeppermintActivity.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
 });
@@ -284,6 +285,12 @@ async function armWake() {
 
 function armSweep(delay) {
   sweepTimer?.cancel();
+  sweepTimer = null;
+  // Nothing gets older to anyone while nobody uses the browser; the sweep
+  // runs again once someone is back.
+  if (lazy.PeppermintActivity.inactive) {
+    return;
+  }
   sweepTimer = newTimer();
   sweepTimer.initWithCallback(
     () => {
@@ -317,6 +324,13 @@ export function initTabArchive() {
   if (!initialized) {
     initialized = true;
     Services.obs.addObserver(observer, "wake_notification");
+    lazy.PeppermintActivity.addObserver({
+      onInactive: () => {
+        sweepTimer?.cancel();
+        sweepTimer = null;
+      },
+      onActive: () => armSweep(FIRST_SWEEP_DELAY_MS),
+    });
     armSweep(FIRST_SWEEP_DELAY_MS);
   }
   wakeDueTabs().catch(error => console.error("Snooze failed", error));

@@ -33,6 +33,7 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   DownloadUtils: "resource://gre/modules/DownloadUtils.sys.mjs",
   clearTimeout: "resource://gre/modules/Timer.sys.mjs",
+  clearInterval: "resource://gre/modules/Timer.sys.mjs",
   setInterval: "resource://gre/modules/Timer.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
 });
@@ -102,6 +103,7 @@ function sleep(ms) {
 
 class PeppermintJanitorImpl {
   #started = false;
+  #dueCheck = null;
   /** @type {Promise<RunSummary>|null} */
   #running = null;
 
@@ -153,27 +155,39 @@ class PeppermintJanitorImpl {
   }
 
   #schedule() {
+    Services.prefs.addObserver(PREFS.enabled, this.#armDueCheck);
+    Services.prefs.addObserver(PREFS.schedule, this.#armDueCheck);
     if (Services.prefs.getBoolPref(PREFS.enabled, false)) {
-      const check = atStart => {
-        // Only a daily or weekly schedule has anything to look for later.
-        if (
-          !atStart &&
-          Services.prefs.getStringPref(PREFS.schedule, "startup") === "startup"
-        ) {
-          return;
-        }
-        ChromeUtils.idleDispatch(() => {
-          this.runIfDue({ atStart }).catch(e =>
-            console.error("Janitor: run failed", e)
-          );
-        });
-      };
-      lazy.setTimeout(() => check(true), START_DELAY_MS);
-      lazy.setInterval(() => check(false), DUE_CHECK_INTERVAL_MS);
+      lazy.setTimeout(() => this.#check(true), START_DELAY_MS);
+      this.#armDueCheck();
     } else if (this.shouldPrompt()) {
       this.#promptWhenWelcomed();
     }
   }
+
+  #check(atStart) {
+    ChromeUtils.idleDispatch(() => {
+      this.runIfDue({ atStart }).catch(e =>
+        console.error("Janitor: run failed", e)
+      );
+    });
+  }
+
+  // Only a daily or weekly schedule has anything to look for later, so the
+  // hourly check exists only for those, and follows the settings.
+  #armDueCheck = () => {
+    lazy.clearInterval(this.#dueCheck);
+    this.#dueCheck = null;
+    if (
+      Services.prefs.getBoolPref(PREFS.enabled, false) &&
+      Services.prefs.getStringPref(PREFS.schedule, "startup") !== "startup"
+    ) {
+      this.#dueCheck = lazy.setInterval(
+        () => this.#check(false),
+        DUE_CHECK_INTERVAL_MS
+      );
+    }
+  };
 
   /** The welcome screen goes first on a new profile. */
   #promptWhenWelcomed() {
@@ -427,7 +441,9 @@ class PeppermintJanitorImpl {
     // A run the user asked for reports everything it freed; the automatic
     // one stays quiet about small amounts.
     const toasts = summary.groups
-      .filter(g => (manual ? g.bytes > 0 || g.files > 0 : g.bytes >= MIN_TOAST_BYTES))
+      .filter(g =>
+        manual ? g.bytes > 0 || g.files > 0 : g.bytes >= MIN_TOAST_BYTES
+      )
       .map(g => ({
         messageId: `peppermint-janitor-toast-${g.group}`,
         size: formatSize(g.bytes),

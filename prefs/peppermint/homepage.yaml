@@ -32,10 +32,3 @@
 
 - name: zen.homepage.cards.clock
   value: true
-
-# Local usage counter for the "time spent browsing" card. Not synced.
-- name: zen.homepage.daily-active-ms
-  value: 0
-
-- name: zen.homepage.daily-active-day
-  value: ""

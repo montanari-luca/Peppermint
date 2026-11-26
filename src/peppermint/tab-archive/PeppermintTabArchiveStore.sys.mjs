@@ -16,13 +16,24 @@
 const FILE_NAME = "tab-archive.json";
 const FILE_VERSION = 1;
 const MAX_ARCHIVED = 1000;
+// Changes close together (an idle sweep archives many tabs) share one write.
+const WRITE_DELAY_MS = 1000;
+
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  DeferredTask: "resource://gre/modules/DeferredTask.sys.mjs",
+});
 
 /** Notifies when the records change; the subject is null, data the id. */
 export const STORE_CHANGED_TOPIC = "peppermint-tab-archive-store-changed";
 
 let recordsPromise = null;
-// Writes run one after another, so two changes never overwrite each other.
+// Changes run one after another, so two never overwrite each other.
 let writeQueue = Promise.resolve();
+let writeTask = null;
+// Writes to disk run one after another too.
+let diskWrite = Promise.resolve();
+let blockerAdded = false;
 
 function filePath() {
   return PathUtils.join(PathUtils.profileDir, FILE_NAME);
@@ -76,12 +87,34 @@ function enqueue(task) {
   return run;
 }
 
-function write(records) {
-  return IOUtils.writeJSON(
-    filePath(),
-    { version: FILE_VERSION, records: [...records.values()] },
-    { tmpPath: `${filePath()}.tmp` }
+function writeNow() {
+  const run = diskWrite.then(async () => {
+    const records = await load();
+    await IOUtils.writeJSON(
+      filePath(),
+      { version: FILE_VERSION, records: [...records.values()] },
+      { tmpPath: `${filePath()}.tmp` }
+    );
+  });
+  diskWrite = run.catch(() => {});
+  return run;
+}
+
+function scheduleWrite() {
+  if (!blockerAdded) {
+    blockerAdded = true;
+    IOUtils.profileBeforeChange.addBlocker("Peppermint tab archive", () =>
+      flushStore()
+    );
+  }
+  writeTask ??= new lazy.DeferredTask(
+    () =>
+      writeNow().catch(error =>
+        console.error("The tab archive could not be saved", error)
+      ),
+    WRITE_DELAY_MS
   );
+  writeTask.arm();
 }
 
 function notifyChanged(id) {
@@ -100,7 +133,7 @@ export async function addRecord(record) {
     for (const id of pickEvictions([...records.values()])) {
       records.delete(id);
     }
-    await write(records);
+    scheduleWrite();
   });
   notifyChanged(stored.id);
   return stored;
@@ -116,7 +149,7 @@ export async function removeRecord(id) {
     if (!records.delete(id)) {
       return false;
     }
-    await write(records);
+    scheduleWrite();
     return true;
   });
   if (removed) {
@@ -138,7 +171,7 @@ export async function clearRecords(kind) {
         records.delete(id);
       }
     }
-    await write(records);
+    scheduleWrite();
   });
   notifyChanged();
 }
@@ -181,10 +214,15 @@ export async function nextWakeTime() {
 }
 
 /**
- * @returns {Promise<void>} Resolves once every write started so far finished
+ * @returns {Promise<void>} Resolves once every change so far is on disk
  */
-export function flushStore() {
-  return writeQueue;
+export async function flushStore() {
+  await writeQueue;
+  if (writeTask?.isArmed) {
+    writeTask.disarm();
+    await writeNow();
+  }
+  await diskWrite;
 }
 
 /**
@@ -194,4 +232,7 @@ export function flushStore() {
 export function resetStoreForTests() {
   recordsPromise = null;
   writeQueue = Promise.resolve();
+  writeTask?.disarm();
+  writeTask = null;
+  diskWrite = Promise.resolve();
 }

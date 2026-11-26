@@ -232,3 +232,38 @@ add_task(async function test_about_dialog() {
   );
   dialog.close();
 });
+
+add_task(async function test_first_check_waits_for_the_interval() {
+  const now = Date.now();
+  const hour = 60 * 60;
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      ["peppermint.update.interval-seconds", 6 * hour],
+      ["peppermint.update.last-check", Math.floor(now / 1000) - hour],
+    ],
+  });
+  const delay = PeppermintUpdater.firstCheckDelay(now);
+  Assert.greater(delay, 4.9 * hour * 1000, "A recent check is not repeated");
+  Assert.lessOrEqual(delay, 5 * hour * 1000, "It waits for the rest only");
+
+  await SpecialPowers.pushPrefEnv({
+    set: [["peppermint.update.last-check", Math.floor(now / 1000) - 7 * hour]],
+  });
+  Assert.equal(
+    PeppermintUpdater.firstCheckDelay(now),
+    30 * 1000,
+    "An overdue check runs shortly after startup"
+  );
+
+  await SpecialPowers.pushPrefEnv({
+    set: [["peppermint.update.last-check", Math.floor(now / 1000) + 99 * hour]],
+  });
+  Assert.equal(
+    PeppermintUpdater.firstCheckDelay(now),
+    6 * hour * 1000,
+    "A clock that went back waits one interval at most"
+  );
+  await SpecialPowers.popPrefEnv();
+  await SpecialPowers.popPrefEnv();
+  await SpecialPowers.popPrefEnv();
+});

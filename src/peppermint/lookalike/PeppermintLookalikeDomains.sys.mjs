@@ -164,45 +164,77 @@ function split(host) {
   }
 }
 
-let gIndex = null;
+let gIndexPromise = null;
 let gSitesOverride = null;
+// Domains indexed per idle slice: the whole list at once is a long task.
+const INDEX_SLICE = 500;
+const IDLE_TIMEOUT_MS = 1000;
 
-function buildIndex(domains) {
+function addToIndex(index, domain, rank) {
+  const parts = split(domain);
+  if (!parts) {
+    return;
+  }
+  index.domains.add(parts.base);
+  index.names.add(parts.name);
+  if (
+    parts.name.length >= CONFUSABLE_MIN_LENGTH &&
+    skeleton(parts.name) == parts.name
+  ) {
+    const list = index.byName.get(parts.name) ?? [];
+    list.push(parts);
+    index.byName.set(parts.name, list);
+  }
+  if (rank < TYPO_SITES && parts.name.length >= TYPO_MIN_LENGTH) {
+    index.typos.push(parts);
+  }
+}
+
+async function buildIndex(domains) {
   const index = {
     domains: new Set(),
     names: new Set(),
     byName: new Map(),
     typos: [],
   };
-  domains.forEach((domain, rank) => {
-    const parts = split(domain);
-    if (!parts) {
-      return;
+  for (let start = 0; start < domains.length; start += INDEX_SLICE) {
+    if (start) {
+      await new Promise(resolve =>
+        ChromeUtils.idleDispatch(resolve, { timeout: IDLE_TIMEOUT_MS })
+      );
     }
-    index.domains.add(parts.base);
-    index.names.add(parts.name);
-    if (
-      parts.name.length >= CONFUSABLE_MIN_LENGTH &&
-      skeleton(parts.name) == parts.name
-    ) {
-      const list = index.byName.get(parts.name) ?? [];
-      list.push(parts);
-      index.byName.set(parts.name, list);
+    const end = Math.min(domains.length, start + INDEX_SLICE);
+    for (let rank = start; rank < end; rank++) {
+      addToIndex(index, domains[rank], rank);
     }
-    if (rank < TYPO_SITES && parts.name.length >= TYPO_MIN_LENGTH) {
-      index.typos.push(parts);
-    }
-  });
+  }
   return index;
 }
 
-async function getIndex() {
-  if (!gIndex) {
+function getIndex() {
+  gIndexPromise ??= (async () => {
     const domains =
       gSitesOverride ?? (await lazy.loadSites()).map(site => site.domain);
-    gIndex ??= buildIndex(domains);
-  }
-  return gIndex;
+    return buildIndex(domains);
+  })();
+  const pending = gIndexPromise;
+  // A failed load is tried again on the next check.
+  pending.catch(() => {
+    if (gIndexPromise === pending) {
+      gIndexPromise = null;
+    }
+  });
+  return pending;
+}
+
+/**
+ * Builds the index ahead of the first check, a slice at a time while the
+ * browser is idle.
+ *
+ * @returns {Promise<void>}
+ */
+export async function prepareLookalikeIndex() {
+  await getIndex();
 }
 
 /**
@@ -254,5 +286,5 @@ export async function findLookalike(host) {
  */
 export function setSitesForTests(domains) {
   gSitesOverride = domains;
-  gIndex = null;
+  gIndexPromise = null;
 }

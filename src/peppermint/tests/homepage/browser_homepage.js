@@ -6,6 +6,7 @@
 const {
   ZenHomepage,
   collectHomepageStats,
+  getTodayActiveMs,
   homepageHistoryCacheForTests,
   isValidHttpURL,
 } = ChromeUtils.importESModule(
@@ -150,28 +151,60 @@ add_task(async function test_history_stats_stay_cached_until_history_changes() {
   );
 });
 
-add_task(async function test_active_time_pref_does_not_refresh_stats() {
+add_task(async function test_card_pref_refreshes_stats() {
   Services.prefs.setStringPref("zen.homepage.mode", "builtin");
   gBrowser.selectedTab = gZenWorkspaces._emptyTab;
   gZenHomepage.sync();
   ok(!document.getElementById("zen-homepage").hidden, "Homepage is visible");
 
   const before = gZenHomepage.statsRefreshCount;
-  Services.prefs.setIntPref("zen.homepage.daily-active-ms", 5);
-  is(
-    gZenHomepage.statsRefreshCount,
-    before,
-    "Writing daily active time does not refresh stats"
-  );
   Services.prefs.setBoolPref("zen.homepage.cards.clock", false);
   is(
     gZenHomepage.statsRefreshCount,
     before + 1,
-    "A homepage card pref still refreshes stats"
+    "A homepage card pref refreshes stats"
   );
-  Services.prefs.setBoolPref("zen.homepage.cards.clock", true);
-  Services.prefs.clearUserPref("zen.homepage.daily-active-ms");
   Services.prefs.clearUserPref("zen.homepage.cards.clock");
+});
+
+add_task(async function test_active_time_is_not_kept_in_prefs() {
+  for (const pref of [
+    "zen.homepage.daily-active-ms",
+    "zen.homepage.daily-active-day",
+  ]) {
+    is(
+      Services.prefs.getPrefType(pref),
+      Services.prefs.PREF_INVALID,
+      `${pref} is gone: the report store counts active time`
+    );
+  }
+  Assert.greaterOrEqual(getTodayActiveMs(), 0, "Today's time is readable");
+});
+
+add_task(async function test_hidden_cards_are_not_worked_out() {
+  Services.prefs.setBoolPref("zen.homepage.cards.top-site", false);
+  Services.prefs.setBoolPref("zen.homepage.cards.visited-sites", false);
+  await PlacesUtils.history.clear();
+  const before = homepageHistoryCacheForTests().queries;
+  const stats = await collectHomepageStats({ isPrivate: false });
+  is(
+    homepageHistoryCacheForTests().queries,
+    before,
+    "History is not read while its cards are hidden"
+  );
+  is(stats.topSite, "\u2014", "A hidden card gets no value");
+  Services.prefs.clearUserPref("zen.homepage.cards.top-site");
+  Services.prefs.clearUserPref("zen.homepage.cards.visited-sites");
+});
+
+add_task(async function test_reads_in_flight_are_shared() {
+  const first = collectHomepageStats({ isPrivate: false });
+  const second = collectHomepageStats({ isPrivate: false });
+  is(first, second, "A second read while one runs shares its result");
+  await first;
+  const later = collectHomepageStats({ isPrivate: false });
+  isnot(later, first, "A read after it finished starts afresh");
+  await later;
 });
 
 add_task(async function test_card_pref_hides_card() {
