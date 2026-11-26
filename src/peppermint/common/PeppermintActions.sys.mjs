@@ -22,6 +22,8 @@ const ALMOST_MAXIMIZE_RATIO = 0.9;
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  PeppermintShareFile:
+    "moz-src:///peppermint/share-file/PeppermintShareFile.sys.mjs",
   PeppermintReader: "moz-src:///peppermint/reader/PeppermintReader.sys.mjs",
   noteURL: "resource:///modules/zen/notepad/ZenNotepadMarkdown.mjs",
   findNoteIdForUrl: "resource:///modules/zen/notepad/ZenNotepadStore.sys.mjs",
@@ -142,6 +144,16 @@ const ACTIONS = [
         console.error("Note about this page failed", error)
       ),
     window => isWebPage(window.gBrowser.currentURI)
+  ),
+  action(
+    "import-shared-file",
+    "zen-action-import-shared-file",
+    "chrome://browser/skin/zen-icons/folder.svg",
+    window =>
+      lazy.PeppermintShareFile.importFromFile(window).catch(error =>
+        console.error("Importing a file failed", error)
+      ),
+    window => !window.gZenWorkspaces?.privateWindowOrDisabled
   ),
   action(
     "open-notes",

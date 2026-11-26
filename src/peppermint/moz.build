@@ -24,6 +24,7 @@ DIRS += [
     "reader",
     "report",
     "screenshot-editor",
+    "share-file",
     "shortcut-sheet",
     "shortcut-tooltips",
     "site-privacy",

@@ -247,6 +247,14 @@ const FEATURES = [
       ).PeppermintVault.init(win),
   },
   {
+    name: "Share to file",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/share-file/PeppermintShareFile.sys.mjs"
+      ).PeppermintShareFile.initWindow(win),
+  },
+  {
     name: "Tab archive menu",
     phase: DELAYED,
     run: win =>

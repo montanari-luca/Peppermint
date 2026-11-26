@@ -1,6 +1,18 @@
 --- a/zen/boosts/ZenBoostsEditor.mjs
 +++ b/zen/boosts/ZenBoostsEditor.mjs
-@@ -965,11 +965,13 @@
+@@ -547,6 +547,11 @@
+   }
+ 
+   onShareBoostPressed() {
++    // Without a share service, sharing a boost means exporting it.
++    if (!Services.prefs.getStringPref("zen.share.base-url", "")) {
++      this.onSaveBoostClick();
++      return;
++    }
+     if (!this.currentBoostData?.changeWasMade) {
+       this.openerWindow.gZenUIManager.showToast(
+         "zen-boost-share-nothing-toast"
+@@ -996,11 +1001,13 @@
      this.currentBoostData.secondaryDotPos.y = relativeYSec / rect.height;
  
      dot.setAttribute("animated", animate ? "true" : "false");

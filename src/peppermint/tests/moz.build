@@ -28,6 +28,7 @@ BROWSER_CHROME_MANIFESTS += [
     "report/browser.toml",
     "screenshot_editor/browser.toml",
     "sessions/browser.toml",
+    "share_file/browser.toml",
     "shortcut_sheet/browser.toml",
     "shortcut_tooltips/browser.toml",
     "site_privacy/browser.toml",

@@ -1,0 +1,19 @@
+--- a/zen/share/ZenShareManager.mjs
++++ b/zen/share/ZenShareManager.mjs
+@@ -111,6 +111,16 @@
+ 
+   async #createAndCopyLink(item) {
+     if (!this.enabled) {
++      return;
++    }
++    // Without a share service the item is saved to a file instead.
++    if (!Services.prefs.getStringPref("zen.share.base-url", "")) {
++      await ChromeUtils.importESModule(
++        "moz-src:///peppermint/share-file/PeppermintShareFile.sys.mjs"
++      ).PeppermintShareFile.exportDocument(window, {
++        version: SHARE_DOCUMENT_VERSION,
++        shared: item,
++      });
+       return;
+     }
+     if (!(await this.#confirmShare())) {

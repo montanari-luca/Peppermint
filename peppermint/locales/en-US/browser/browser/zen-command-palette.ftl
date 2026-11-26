@@ -7,6 +7,7 @@ zen-action-open-notepad = Open Notepad
 zen-action-search-tabs = Search Tabs
 zen-action-note-about-page = Note About This Page
 zen-action-open-notes = Open All Notes
+zen-action-import-shared-file = Import Space, Folder or Split View from File
 zen-action-open-vault = Open Vault
 zen-action-lock-vault = Lock Vault
 zen-action-manage-url-snippets = Manage URL Snippets
