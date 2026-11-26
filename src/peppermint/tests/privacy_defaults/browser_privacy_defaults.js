@@ -29,6 +29,26 @@ add_task(async function test_defaults() {
   );
 });
 
+// Memory and disk defaults (prefs/peppermint/additions.yaml).
+add_task(async function test_resource_defaults() {
+  const defaults = Services.prefs.getDefaultBranch("");
+  Assert.equal(
+    defaults.getBoolPref("browser.newtab.preload"),
+    false,
+    "No hidden new tab page is kept loaded"
+  );
+  Assert.equal(
+    defaults.getIntPref("dom.ipc.processPrelaunch.fission.number"),
+    1,
+    "One spare content process is kept ready"
+  );
+  Assert.equal(
+    defaults.getBoolPref("browser.places.interactions.enabled"),
+    false,
+    "Page interactions are not recorded"
+  );
+});
+
 add_task(async function test_tracking_protection_stays_standard() {
   const { ContentBlockingPrefs } = ChromeUtils.importESModule(
     "moz-src:///browser/components/protections/ContentBlockingPrefs.sys.mjs"

@@ -46,6 +46,22 @@
 - name: media.suspend-background-video.delay-ms
   value: 5000
 
+# Memory: Firefox keeps a hidden about:newtab loaded for the next new tab, but
+# Peppermint never shows it (new tabs open the address bar, and the homepage is
+# drawn over the empty tab).
+- name: browser.newtab.preload
+  value: false
+
+# Memory: Firefox keeps three empty content processes ready; one is enough to
+# open the next site without waiting.
+- name: dom.ipc.processPrelaunch.fission.number
+  value: 1
+
+# Disk: Firefox records how long each page is viewed and typed into in
+# places.sqlite. Nothing in Peppermint reads it.
+- name: browser.places.interactions.enabled
+  value: false
+
 
 # --- firefox/urlbar.yaml
 
