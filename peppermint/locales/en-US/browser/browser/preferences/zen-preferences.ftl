@@ -655,3 +655,17 @@ peppermint-feature-startup-doctor-keywords = startup, launch, slow, speed, perfo
 peppermint-feature-updater = Automatic Updates
 peppermint-feature-updater-description = Checks for new Peppermint versions and installs them when you restart.
 peppermint-feature-updater-keywords = update, version, upgrade
+
+## Shortcuts Peppermint adds to Zen's keyboard settings
+
+peppermint-shortcut-split-focus-next = Go to the Next Split View Pane
+peppermint-shortcut-split-focus-previous = Go to the Previous Split View Pane
+peppermint-shortcut-split-rotate = Rotate Split View Panes
+peppermint-shortcut-glance-split = Open Glance in Split View
+peppermint-shortcut-unload-space = Unload Space
+peppermint-shortcut-unload-other-spaces = Unload All Other Spaces
+peppermint-shortcut-theme-picker = Edit Space Theme
+peppermint-shortcut-new-folder = New Folder
+peppermint-shortcut-new-live-folder = New Live Folder
+peppermint-shortcut-edit-pinned-url = Edit Pinned Tab Address
+peppermint-shortcut-tabs-on-right = Toggle Tabs on the Right

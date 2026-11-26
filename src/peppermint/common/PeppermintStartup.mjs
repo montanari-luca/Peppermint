@@ -135,6 +135,23 @@ const FEATURES = [
         "moz-src:///peppermint/tab-numbers/PeppermintTabNumbers.sys.mjs"
       ).PeppermintTabNumbers.init(win),
   },
+  // Keyboard commands work from the first frame on.
+  {
+    name: "PeppermintShortcutSheet",
+    phase: PAINT,
+    run: win =>
+      load(
+        "moz-src:///peppermint/shortcut-sheet/PeppermintShortcutSheet.sys.mjs"
+      ).PeppermintShortcutSheet.init(win),
+  },
+  {
+    name: "Split view keys",
+    phase: PAINT,
+    run: win =>
+      load(
+        "moz-src:///peppermint/split-keys/PeppermintSplitKeys.sys.mjs"
+      ).PeppermintSplitKeys.initWindow(win),
+  },
   // Restored tabs keep their islands.
   {
     name: "PeppermintTabIslands",
@@ -211,14 +228,6 @@ const FEATURES = [
       load(
         "moz-src:///peppermint/undo-close/PeppermintUndoClose.sys.mjs"
       ).PeppermintUndoClose.init(win),
-  },
-  {
-    name: "PeppermintShortcutSheet",
-    phase: DELAYED,
-    run: win =>
-      load(
-        "moz-src:///peppermint/shortcut-sheet/PeppermintShortcutSheet.sys.mjs"
-      ).PeppermintShortcutSheet.init(win),
   },
   {
     name: "PeppermintShortcutTooltips",

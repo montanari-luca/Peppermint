@@ -1,31 +1,51 @@
 --- a/browser/base/content/browser-sets.inc.xhtml
 +++ b/browser/base/content/browser-sets.inc.xhtml
-@@ -135,6 +135,10 @@
+@@ -135,6 +135,13 @@
+     <command id="splitViewCmd_separateTabs"/>
      <command id="splitViewCmd_reverseTabs"/>
      <command id="splitViewCmd_closeTabs"/>
-   </commandset>
++  </commandset>
 +  <!-- Peppermint: handled by the module of each command (PeppermintStartup). -->
 +  <commandset id="peppermintCommandSet">
 +    <command id="cmd_peppermintShortcutSheet"/>
-+  </commandset>
++    <command id="cmd_peppermintSplitFocusNext"/>
++    <command id="cmd_peppermintSplitFocusPrevious"/>
++    <command id="cmd_peppermintSplitRotate"/>
+   </commandset>
  
    <keyset id="mainKeyset">
-     <key id="key_newNavigator"
-@@ -408,7 +412,17 @@
-     <key id="key_hideOtherAppsCmdMac"
+@@ -413,6 +420,34 @@
           data-l10n-id="hide-other-apps-shortcut"
           modifiers="accel,alt"
-+         internal="true"/>
+          internal="true"/>
 +#else
 +    <key id="key_preferencesCmdWin"
 +         data-l10n-id="preferences-shortcut"
 +         modifiers="accel"
 +         command="menu_preferences"
-          internal="true"/>
++         internal="true"/>
  #endif
 +    <key id="key_peppermintShortcutSheet"
 +         key="/"
 +         modifiers="accel"
 +         command="cmd_peppermintShortcutSheet"/>
++    <key id="peppermint-split-focus-next"
++         key="]"
++         modifiers="accel,alt"
++         command="cmd_peppermintSplitFocusNext"/>
++    <key id="peppermint-split-focus-previous"
++         key="["
++         modifiers="accel,alt"
++         command="cmd_peppermintSplitFocusPrevious"/>
++    <!-- No default key: these only become bindable in the shortcut settings. -->
++    <key id="peppermint-split-rotate" command="cmd_peppermintSplitRotate"/>
++    <key id="peppermint-glance-split" command="cmd_zenGlanceSplit"/>
++    <key id="peppermint-unload-space" command="cmd_zenUnloadWorkspace"/>
++    <key id="peppermint-unload-other-spaces" command="cmd_zenUnloadAllOtherWorkspace"/>
++    <key id="peppermint-theme-picker" command="cmd_zenOpenZenThemePicker"/>
++    <key id="peppermint-new-folder" command="cmd_zenOpenFolderCreation"/>
++    <key id="peppermint-new-live-folder" command="cmd_zenNewLiveFolder"/>
++    <key id="peppermint-edit-pinned-url" command="cmd_zenEditPinnedUrl"/>
++    <key id="peppermint-tabs-on-right" command="cmd_zenToggleTabsOnRight"/>
    </keyset>
  #include zen-keysets.inc.xhtml

@@ -32,6 +32,7 @@ BROWSER_CHROME_MANIFESTS += [
     "shortcut_sheet/browser.toml",
     "shortcut_tooltips/browser.toml",
     "site_privacy/browser.toml",
+    "split_keys/browser.toml",
     "startup/browser.toml",
     "startup_doctor/browser.toml",
     "sync_override/browser.toml",

@@ -28,6 +28,7 @@ DIRS += [
     "shortcut-sheet",
     "shortcut-tooltips",
     "site-privacy",
+    "split-keys",
     "startup-doctor",
     "sync-override",
     "tab-archive",

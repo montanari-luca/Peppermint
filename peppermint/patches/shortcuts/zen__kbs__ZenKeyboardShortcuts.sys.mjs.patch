@@ -1,0 +1,13 @@
+--- a/zen/kbs/ZenKeyboardShortcuts.sys.mjs
++++ b/zen/kbs/ZenKeyboardShortcuts.sys.mjs
+@@ -148,6 +148,10 @@
+     ],
+   },
+ ];
++// Peppermint's keys, and Zen commands Peppermint gives a key to bind.
++ChromeUtils.importESModule(
++  "moz-src:///peppermint/split-keys/PeppermintSplitKeys.sys.mjs"
++).addPeppermintKeys(ZEN_KEY_CATEGORIES);
+ 
+ /**
+  * Normalize a list of modifier names into the comma separated form that
