@@ -7,6 +7,7 @@ import {
   formatLabel,
   showToast,
 } from "moz-src:///peppermint/palette/PeppermintPaletteAction.sys.mjs";
+import { PeppermintGlance } from "moz-src:///peppermint/common/PeppermintGlance.sys.mjs";
 
 const ICONS = "chrome://browser/skin/zen-icons/";
 
@@ -22,7 +23,8 @@ const ICONS = "chrome://browser/skin/zen-icons/";
  * A setting without `choices` is a boolean pref and offers whichever of
  * "Enable" and "Disable" is not already the case. One with `choices` offers
  * every choice but the current one. `requires` names a boolean pref that has
- * to be on for the setting to mean anything.
+ * to be on for the setting to mean anything. A toggle that is not a boolean
+ * pref gives `read()` and `write(on)`; `pref` is then only checked for a lock.
  */
 export const SETTINGS = [
   // Privacy and security
@@ -211,7 +213,15 @@ export const SETTINGS = [
     pref: "media.videocontrols.picture-in-picture.video-toggle.enabled",
     icon: "window",
   },
-  { id: "glance", pref: "zen.glance.enabled", icon: "sparkles" },
+  {
+    id: "glance",
+    pref: PeppermintGlance.METHOD_PREF,
+    icon: "sparkles",
+    read: () => PeppermintGlance.enabled,
+    write: on => {
+      PeppermintGlance.enabled = on;
+    },
+  },
 ];
 
 const keywordsOf = setting =>
@@ -227,6 +237,10 @@ function isLocked(setting) {
 
 function readsOn(pref) {
   return Services.prefs.getBoolPref(pref, false);
+}
+
+function isOn(setting) {
+  return setting.read ? setting.read() : readsOn(setting.pref);
 }
 
 function readChoice(setting) {
@@ -256,14 +270,18 @@ function booleanActions(setting) {
       turnOn ? "peppermint-setting-enable" : "peppermint-setting-disable",
       icon,
       window => {
-        Services.prefs.setBoolPref(setting.pref, turnOn);
+        if (setting.write) {
+          setting.write(turnOn);
+        } else {
+          Services.prefs.setBoolPref(setting.pref, turnOn);
+        }
         showToast(
           window,
           turnOn ? "peppermint-setting-is-on" : "peppermint-setting-is-off",
           nameOf(setting)()
         );
       },
-      () => isOffered(setting) && readsOn(setting.pref) !== turnOn,
+      () => isOffered(setting) && isOn(setting) !== turnOn,
       nameOf(setting),
       keywordsOf(setting)
     )

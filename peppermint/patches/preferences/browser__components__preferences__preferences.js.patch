@@ -1,6 +1,6 @@
 --- a/browser/components/preferences/preferences.js
 +++ b/browser/components/preferences/preferences.js
-@@ -244,7 +244,7 @@
+@@ -258,7 +258,7 @@
    about: {
      l10nId: "about-firefox-header",
      iconSrc: "chrome://browser/skin/sidebar/firefox.svg",
@@ -9,12 +9,10 @@
      module: "chrome://browser/content/preferences/config/about-firefox.mjs",
      visible: () => srdSectionPrefs.all,
    },
-@@ -569,9 +569,16 @@
+@@ -597,7 +597,16 @@
    }
    register_module("paneSearch", gSearchPane);
    register_module("panePrivacy", gPrivacyPane);
--  register_module("paneZenLooks", gZenLooksAndFeel);
--  register_module("paneZenTabManagement", gZenWorkspacesSettings);
 -  register_module("paneZenMarketplace", gZenMarketplaceManager);
 +  register_module("paneZenSidebarLayout", gZenLooksAndFeel);
 +  register_module("paneZenToolbarUrlbar", gZenToolbarUrlbarSettings);

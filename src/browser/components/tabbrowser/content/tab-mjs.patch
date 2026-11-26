@@ -1,3 +1,5 @@
+diff --git a/browser/components/tabbrowser/content/tab.mjs b/browser/components/tabbrowser/content/tab.mjs
+index 81c6e5dd4047fc7d57b5938e797a014c71d07cf9..12c55470bc166ecf610abb92bb96aa51f68455d3 100644
 --- a/browser/components/tabbrowser/content/tab.mjs
 +++ b/browser/components/tabbrowser/content/tab.mjs
 @@ -15,9 +15,11 @@ export class MozTabbrowserTab extends MozElements.MozTab {

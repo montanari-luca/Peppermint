@@ -156,19 +156,24 @@ function regenerate(patchRel) {
       }
       fs.mkdirSync(path.dirname(path.join(after, target)), { recursive: true });
     }
-    let applied = false;
-    for (const fuzz of ["-F2", "-F3"]) {
-      for (const target of targets) {
-        fs.copyFileSync(path.join(before, target), path.join(after, target));
-      }
-      const result = runPatch(
-        ["-p1", fuzz, "--forward", "--force", "--batch", "--no-backup-if-mismatch", "-r", "/dev/null", "-i", source],
-        after
+    // Fuzz 2 still needs the context line next to each change to match. Fuzz 3
+    // ignores all three context lines and drops the hunk at its old line
+    // number, wherever that now is (it once put a tuple entry inside an
+    // unrelated loop), so a hunk that needs it is dropped and reported instead.
+    for (const target of targets) {
+      fs.copyFileSync(path.join(before, target), path.join(after, target));
+    }
+    const result = runPatch(
+      ["-p1", "-F2", "--forward", "--force", "--batch", "--no-backup-if-mismatch", "-r", "/dev/null", "-i", source],
+      after
+    );
+    const applied = result.ok || /succeeded/.test(result.output);
+    if (!result.ok) {
+      const dropped = result.output.split("\n").filter(line => /FAILED/.test(line));
+      console.warn(
+        `surfer-import: ${patchRel}: hunks that no longer apply were dropped, carry them in an overlay patch:\n  ` +
+          dropped.join("\n  ")
       );
-      applied = result.ok || /succeeded/.test(result.output);
-      if (result.ok) {
-        break;
-      }
     }
 
     let out = "";

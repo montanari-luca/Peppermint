@@ -1,0 +1,8 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# The Glance activation method to restore when Glance is turned back on
+# (PeppermintGlance.sys.mjs). Empty until Glance is first turned off.
+- name: peppermint.glance.previous-activation-method
+  value: ""

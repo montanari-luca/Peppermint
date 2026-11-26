@@ -1,9 +1,10 @@
 --- a/zen/mods/ZenMods.mjs
 +++ b/zen/mods/ZenMods.mjs
-@@ -288,41 +288,7 @@
+@@ -287,42 +287,8 @@
+     const buffer = new TextEncoder().encode(content);
  
      await IOUtils.write(this.#styleSheetPath, buffer);
-   }
+-  }
 -
 -  #compareVersions(version1, version2) {
 -    let result = false;
@@ -11,7 +12,7 @@
 -    if (typeof version1 !== "object") {
 -      version1 = version1.toString().split(".");
 -    }
- 
+-
 -    if (typeof version2 !== "object") {
 -      version2 = version2.toString().split(".");
 -    }
@@ -32,8 +33,8 @@
 -      }
 -    }
 -    return result;
--  }
--
+   }
+ 
 -  #composeModApiUrl(modId) {
 -    // keeping theme here as it would require changes to CI to change the name
 -    return `https://zen-browser.github.io/theme-store/themes/${modId}/theme.json`;
@@ -42,46 +43,10 @@
    async #downloadUrlToFile(url, path, maxRetries = 3, retryDelayMs = 500) {
      // Mod assets must come over HTTPS. Without a signing/hash scheme this
      // is the minimum guard against MITM or a store-hosted HTTP redirect
-@@ -514,18 +480,6 @@
-       await this.#insertStylesheet();
- 
-       this.#setNewMilestoneIfNeeded();
--      if (this.#shouldAutoUpdate()) {
--        requestIdleCallback(
--          () => {
--            if (!window.closed) {
--              requestAnimationFrame(() => {
--                this.checkForModsUpdates();
--              });
--            }
--          },
--          { timeout: 1000 }
--        );
--      }
-     } catch (e) {
-       console.error("[ZenMods]: Error loading Zen Mods:", e);
-     }
-@@ -559,75 +513,6 @@
-       );
-       Services.prefs.clearUserPref("zen.mods.last-update");
-     }
--  }
--
--  #shouldAutoUpdate() {
--    const daysBeforeUpdate = Services.prefs.getIntPref(
--      "zen.mods.auto-update-days"
--    );
--    const lastUpdatedSec = Services.prefs.getIntPref(
--      "zen.mods.last-update",
--      -1
--    );
--    const nowSec = Math.floor(Date.now() / 1000);
--    const daysSinceUpdate = (nowSec - lastUpdatedSec) / (60 * 60 * 24);
--
--    return (
--      (Services.prefs.getBoolPref("zen.mods.auto-update", true) &&
--        daysSinceUpdate >= daysBeforeUpdate) ||
--      lastUpdatedSec < 0
+@@ -527,54 +493,7 @@
+         );
+       },
+       { once: true }
 -    );
 -  }
 -
@@ -124,20 +89,16 @@
 -          return null;
 -        }
 -      })
--    );
+     );
 -
 -    await this.updateMods(mods);
--    Services.prefs.setIntPref(
--      "zen.mods.last-update",
--      Math.floor(Date.now() / 1000)
--    );
 -    return updates.filter(update => {
 -      return update !== null;
 -    });
    }
  
    async removeMod(modId, triggerUpdate = true) {
-@@ -731,33 +616,6 @@
+@@ -678,33 +597,6 @@
      this.triggerModsUpdate();
    }
  

@@ -21,6 +21,7 @@ BROWSER_CHROME_MANIFESTS += [
     "omni_utils/browser.toml",
     "permission_auto_revoke/browser.toml",
     "popular_sites/browser.toml",
+    "preferences/browser.toml",
     "privacy_defaults/browser.toml",
     "reader/browser.toml",
     "report/browser.toml",

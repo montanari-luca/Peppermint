@@ -1,3 +1,5 @@
+diff --git a/.stylelintrc.js b/.stylelintrc.js
+index ac1558e8a551a9fc790058586d68295ef37a42e3..ca21f8f5f8df94c0711d2cca2bb5571ed5132e95 100644
 --- a/.stylelintrc.js
 +++ b/.stylelintrc.js
 @@ -17,6 +17,19 @@ function readFile(filePath) {

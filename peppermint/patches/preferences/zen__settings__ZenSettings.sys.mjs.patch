@@ -1,0 +1,16 @@
+--- a/zen/settings/ZenSettings.sys.mjs
++++ b/zen/settings/ZenSettings.sys.mjs
+@@ -39,11 +39,8 @@
+    * @returns {boolean} Whether the request was handled here.
+    */
+   handleOpenPreferences(paneID, extraArgs) {
+-    if (paneID || extraArgs?.urlParams) {
+-      return false;
+-    }
+-    this.open();
+-    return true;
++    // Peppermint keeps its settings in about:preferences.
++    return false;
+   }
+ 
+   /**

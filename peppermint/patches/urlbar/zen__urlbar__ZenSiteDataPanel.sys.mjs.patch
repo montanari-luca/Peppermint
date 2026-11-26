@@ -22,10 +22,10 @@
      this.anchor.addEventListener("click", this);
      const kCommandIDs = [
        "zen-site-data-header-share",
-@@ -107,6 +115,15 @@
-         }
+@@ -109,6 +117,15 @@
        },
-     });
+     };
+     this.window.gBrowser.addProgressListener(progressListener);
 +    this.window.gBrowser.addEventListener(
 +      "PermissionStateChange",
 +      () => {
@@ -38,7 +38,7 @@
      this.window.addEventListener(
        "unload",
        () => {
-@@ -233,12 +250,63 @@
+@@ -232,12 +249,63 @@
    #preparePanel() {
      this.#resetSiteOptionsList();
      this.#setSiteBoost();
@@ -102,7 +102,7 @@
    #setSiteBoost() {
      const domain = this.#getCurrentDomain();
      const uri = this.window.gBrowser.currentURI;
-@@ -619,6 +687,45 @@
+@@ -618,6 +686,45 @@
      section.hidden = !list.childElementCount;
    }
  
@@ -148,7 +148,7 @@
    #getPermissionStateLabelId(permission) {
      const { SitePermissions } = this.window;
      switch (permission.state) {
-@@ -692,10 +799,7 @@
+@@ -691,10 +798,7 @@
        "class",
        "zen-permission-popup-permission-state-label"
      );
@@ -160,7 +160,7 @@
      labelContainer.appendChild(stateLabel);
  
      container.appendChild(img);
-@@ -778,6 +882,24 @@
+@@ -777,6 +881,24 @@
      const { SitePermissions, gBrowser } = this.window;
      const permission = label._permission;
  
@@ -185,7 +185,7 @@
      let newState;
      switch (permission.state) {
        case SitePermissions.ALLOW:
-@@ -854,6 +976,10 @@
+@@ -853,6 +975,10 @@
    }
  
    #onClickEvent(event) {
@@ -196,7 +196,7 @@
      const id = event.target.id;
      switch (id) {
        case "zen-site-data-manage-addons": {
-@@ -902,6 +1028,15 @@
+@@ -901,6 +1027,15 @@
        case "command":
          this.#onCommandEvent(event);
          break;

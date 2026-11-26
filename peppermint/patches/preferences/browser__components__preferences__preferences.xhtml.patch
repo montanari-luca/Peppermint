@@ -8,7 +8,7 @@
    <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-group.css" />
    <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-pane.css" />
    <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-control.css" />
-@@ -86,6 +87,7 @@
+@@ -87,6 +88,7 @@
    <script src="chrome://browser/content/preferences/preferences.js"/>
    <script src="chrome://browser/content/preferences/extensionControlled.js"/>
    <script src="chrome://browser/content/preferences/findInPage.js"/>
@@ -16,12 +16,25 @@
    <script src="chrome://browser/content/migration/migration-wizard.mjs" type="module"></script>
    <script type="module" src="chrome://browser/content/backup/backup-settings.mjs"></script>
    <script type="module" src="chrome://browser/content/preferences/widgets/dialog-button.mjs"></script>
-@@ -123,26 +125,61 @@
+@@ -117,22 +119,67 @@
+   <hbox flex="1">
+ 
+     <html:moz-page-nav id="categories" data-l10n-id="category-nav-heading" allownoselection="true">
+-      <html:moz-page-nav-button id="category-zen-settings"
+-        view="zenSettingsWindow"
+-        iconsrc="chrome://browser/skin/zen-icons/settings.svg"
+-        data-l10n-id="zen-preferences-open-zen-settings">
+-      </html:moz-page-nav-button>
+       <html:moz-page-nav-button id="category-general"
+         hidden="true"
+         view="paneGeneral"
          iconsrc="chrome://browser/skin/preferences/category-general.svg"
          data-l10n-id="pane-general-title">
        </html:moz-page-nav-button>
--      <html:moz-page-nav-button id="category-zen-looks"
--        view="paneZenLooks"
+-      <html:moz-page-nav-button id="category-zen-marketplace"
+-        view="paneZenMarketplace"
+-        iconsrc="chrome://mozapps/skin/extensions/category-themes.svg"
+-        data-l10n-id="pane-zen-marketplace-title">
 +      <html:moz-page-nav-button id="category-zen-peppermint"
 +        view="paneZenPeppermint"
 +        iconsrc="chrome://browser/skin/zen-icons/lightbulb.svg"
@@ -34,12 +47,9 @@
 +      </html:moz-page-nav-button>
 +      <html:moz-page-nav-button id="category-zen-sidebar-layout"
 +        view="paneZenSidebarLayout"
-         iconsrc="chrome://browser/skin/customize.svg"
--        data-l10n-id="pane-zen-looks-title">
++        iconsrc="chrome://browser/skin/customize.svg"
 +        data-l10n-id="pane-zen-sidebar-layout-title">
-       </html:moz-page-nav-button>
--      <html:moz-page-nav-button id="category-zen-tabs-management"
--        view="paneZenTabManagement"
++      </html:moz-page-nav-button>
 +      <html:moz-page-nav-button id="category-zen-toolbar-urlbar"
 +        view="paneZenToolbarUrlbar"
 +        iconsrc="chrome://browser/skin/preferences/category-search.svg"
@@ -47,26 +57,19 @@
 +      </html:moz-page-nav-button>
 +      <html:moz-page-nav-button id="category-zen-spaces-tabs"
 +        view="paneZenSpacesTabs"
-         iconsrc="chrome://browser/skin/window.svg"
--        data-l10n-id="pane-zen-tabs-title">
++        iconsrc="chrome://browser/skin/window.svg"
 +        data-l10n-id="pane-zen-spaces-tabs-title">
-       </html:moz-page-nav-button>
-       <html:moz-page-nav-button id="category-zen-CKS"
-         href="about:keyboard"
--        iconsrc="chrome://browser/skin/preferences/category-accessibility.svg"
--        data-l10n-id="pane-zen-CKS-title">
++      </html:moz-page-nav-button>
++      <html:moz-page-nav-button id="category-zen-CKS"
++        href="about:keyboard"
 +        iconsrc="chrome://browser/skin/zen-icons/brackets-curly.svg"
 +        data-l10n-id="pane-zen-shortcuts-title">
        </html:moz-page-nav-button>
--      <html:moz-page-nav-button id="category-zen-marketplace"
--        view="paneZenMarketplace"
--        iconsrc="chrome://mozapps/skin/extensions/category-themes.svg"
--        data-l10n-id="pane-zen-marketplace-title">
 +      <html:moz-page-nav-button id="category-zen-url-snippets"
 +        view="paneZenUrlSnippets"
 +        iconsrc="chrome://browser/skin/zen-icons/link.svg"
 +        data-l10n-id="pane-zen-url-snippets-title">
-       </html:moz-page-nav-button>
++      </html:moz-page-nav-button>
 +      <html:moz-page-nav-button id="category-zen-adblock"
 +        view="paneZenAdblock"
 +        iconsrc="chrome://browser/skin/zen-icons/tracking-protection-fill.svg"
@@ -90,12 +93,10 @@
        <html:moz-page-nav-button id="category-sync"
          hidden="true"
          view="paneSync"
-@@ -279,9 +316,16 @@
+@@ -269,7 +316,16 @@
  #include privacy.inc.xhtml
  #include sync.inc.xhtml
  #include moreFromMozilla.inc.xhtml
--#include zenLooksAndFeel.inc.xhtml
--#include zenTabsManagement.inc.xhtml
 -#include zenMarketplace.inc.xhtml
 +#include zenSidebarLayout.inc.xhtml
 +#include zenToolbarUrlbar.inc.xhtml

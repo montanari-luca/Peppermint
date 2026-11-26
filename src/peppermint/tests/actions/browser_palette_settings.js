@@ -63,6 +63,17 @@ add_task(function test_every_setting_is_wired_up() {
           `${setting.id}/${choice.id} matches the type of ${setting.pref}`
         );
       }
+    } else if (setting.read) {
+      Assert.equal(
+        typeof setting.read(),
+        "boolean",
+        `${setting.id} reads on/off`
+      );
+      Assert.equal(
+        typeof setting.write,
+        "function",
+        `${setting.id} can be set`
+      );
     } else {
       Assert.equal(
         type,
@@ -86,6 +97,34 @@ add_task(async function test_boolean_setting_offers_the_other_state() {
   ok(off.isAvailable(window), "Disabling is");
   off.command(window);
   ok(!Services.prefs.getBoolPref(pref), "Disabling turns the pref off");
+  await SpecialPowers.popPrefEnv();
+});
+
+add_task(async function test_glance_toggle_keeps_the_activation_method() {
+  const pref = "zen.glance.activation-method";
+  const on = byId("peppermint:setting-glance-on");
+  const off = byId("peppermint:setting-glance-off");
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      [pref, "ctrl"],
+      ["peppermint.glance.previous-activation-method", ""],
+    ],
+  });
+  ok(!on.isAvailable(window), "Enabling is not offered while Glance is on");
+  ok(off.isAvailable(window), "Disabling is");
+  off.command(window);
+  Assert.equal(
+    Services.prefs.getStringPref(pref),
+    "none",
+    "Disabling turns Glance off"
+  );
+  ok(on.isAvailable(window), "Enabling is offered again");
+  on.command(window);
+  Assert.equal(
+    Services.prefs.getStringPref(pref),
+    "ctrl",
+    "Enabling restores the method"
+  );
   await SpecialPowers.popPrefEnv();
 });
 
