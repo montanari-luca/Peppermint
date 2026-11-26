@@ -192,6 +192,30 @@ export async function removeRecord(id) {
 }
 
 /**
+ * @param {string} id
+ * @param {object} changes - Fields to change; `id` stays as it is
+ * @returns {Promise<object|null>} The changed record, or null when there is
+ *   no such record
+ */
+export async function updateRecord(id, changes) {
+  const updated = await enqueue(async () => {
+    const records = await load();
+    const record = records.get(id);
+    if (!record) {
+      return null;
+    }
+    const next = { ...record, ...changes, id };
+    records.set(id, next);
+    scheduleWrite();
+    return next;
+  });
+  if (updated) {
+    notifyChanged(id);
+  }
+  return updated;
+}
+
+/**
  * Remove every record of one kind.
  *
  * @param {"archive"|"snooze"} kind

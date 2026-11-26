@@ -15,6 +15,7 @@ BROWSER_CHROME_MANIFESTS += [
     "ghost_mode/browser.toml",
     "homepage/browser.toml",
     "janitor/browser.toml",
+    "library/browser.toml",
     "lookalike/browser.toml",
     "new_tab/browser.toml",
     "notepad/browser.toml",

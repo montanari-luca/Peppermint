@@ -1,0 +1,32 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Peppermint's Library tabs use one still icon where Zen's play a sprite. */
+.zen-library-tab:is([data-section="peppermint-archive"], [data-section="peppermint-saved"])
+  .zen-library-tab-icon-image {
+  width: var(--zen-library-sprite-size);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  fill: var(--zen-library-tab-icon-stroke);
+  animation: none;
+}
+
+.zen-library-tab[data-section="peppermint-archive"] .zen-library-tab-icon-image {
+  background-image: url("chrome://browser/skin/zen-icons/history.svg");
+}
+
+.zen-library-tab[data-section="peppermint-saved"] .zen-library-tab-icon-image {
+  background-image: url("chrome://browser/skin/zen-icons/reader-mode.svg");
+}
+
+.zen-library-tab:is([data-section="peppermint-archive"], [data-section="peppermint-saved"]):not([active])
+  .zen-library-tab-icon-image {
+  fill: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+/* An unread article stands out a little from the ones already read. */
+.peppermint-library-saved-row:not([unread]) .zen-library-row-title {
+  opacity: var(--zen-opacity-70);
+}

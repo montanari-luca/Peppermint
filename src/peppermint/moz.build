@@ -16,6 +16,7 @@ DIRS += [
     "ghost-mode",
     "homepage",
     "janitor",
+    "library",
     "lookalike",
     "notepad",
     "omni-utils",

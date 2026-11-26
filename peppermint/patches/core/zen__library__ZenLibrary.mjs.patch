@@ -1,6 +1,12 @@
 --- a/zen/library/ZenLibrary.mjs
 +++ b/zen/library/ZenLibrary.mjs
-@@ -34,7 +34,8 @@
+@@ -30,11 +30,14 @@
+       "moz-src:///zen/library/sections/ZenLibrarySpacesSection.mjs",
+     ZenLibrarySpaceRoutingSection:
+       "moz-src:///zen/library/sections/ZenLibrarySpaceRoutingSection.mjs",
++    PeppermintLibrarySections:
++      "moz-src:///peppermint/library/PeppermintLibrarySections.mjs",
+   },
    { global: "current" }
  );
  
@@ -10,8 +16,11 @@
  const HIDDEN_TABS_PREF = "zen.library.hidden-tabs";
  const CLEANUP_DELAY_MS = 30000;
  const IDLE_CLEANUP_TIMEOUT_MS = 2000;
-@@ -113,11 +114,24 @@
+@@ -111,13 +114,27 @@
+           }
+         : {}),
        history: lazy.ZenLibraryHistorySection,
++      ...lazy.PeppermintLibrarySections.forWindow(window),
      };
      this.customizing = false;
 -    const lastTab = Services.prefs.getStringPref(LAST_TAB_PREF, "history");
@@ -37,7 +46,7 @@
    #tabsObserver = {
      observe: () => this.requestUpdate(),
    };
-@@ -219,7 +233,6 @@
+@@ -219,7 +236,6 @@
  
      this._activeTab = value;
      this.#mounted.add(value);
@@ -45,17 +54,17 @@
    }
  
    get activeTab() {
-@@ -527,6 +540,9 @@
+@@ -533,6 +549,9 @@
+         this.animateProgress(1);
        }
        return;
-     }
++    }
 +    if (!opening) {
 +      lib.activeTab = lib.#resolveDefaultSection();
-+    }
+     }
      this.animateProgress(opening ? 0 : 1);
    }
- 
-@@ -667,6 +683,10 @@
+@@ -674,6 +693,10 @@
      lib.#canSwipe = true;
      lib.#beforeSwipeState = this.isLibraryOpen ? 1 : 0;
  
@@ -66,7 +75,7 @@
      await lib.#whenStylesLoaded();
      await window.promiseDocumentFlushed(() => {});
      // The swipe may already have ended, its own animation taking over.
-@@ -1045,7 +1065,7 @@
+@@ -1053,7 +1076,7 @@
          image: "chrome://browser/skin/zen-icons/heart-circle-fill.svg",
          l10nId: "library-footer-donate-button",
          command: () => {

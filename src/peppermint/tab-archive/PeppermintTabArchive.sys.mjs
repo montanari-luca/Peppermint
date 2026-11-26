@@ -22,6 +22,7 @@ import {
   getRecord,
   nextWakeTime,
   removeRecord,
+  updateRecord,
 } from "moz-src:///peppermint/tab-archive/PeppermintTabArchiveStore.sys.mjs";
 import { bumpReport } from "moz-src:///peppermint/report/PeppermintReportStore.sys.mjs";
 import { showToast } from "moz-src:///peppermint/palette/PeppermintPaletteAction.sys.mjs";
@@ -266,6 +267,24 @@ export async function snoozeTab(win, tab, wakeAt) {
 }
 
 /**
+ * Snooze a tab that is already in the archive.
+ *
+ * @param {string} id - Record id
+ * @param {"later"|"tomorrow"|"next-week"} preset
+ * @returns {Promise<object|null>} The record, or null when there is none
+ */
+export async function snoozeRecord(id, preset) {
+  const record = await updateRecord(id, {
+    kind: "snooze",
+    wakeAt: snoozeTime(Date.now(), preset),
+  });
+  if (record) {
+    armWake();
+  }
+  return record;
+}
+
+/**
  * @param {number} [hours] - Defaults to the pref
  * @returns {{win: Window, tab: MozTabbrowserTab}[]} Tabs that sat idle for at
  *   least `hours` and may be archived
@@ -327,8 +346,30 @@ export async function archiveIdleTabs(hours) {
  */
 export async function restoreRecord(id, preferred, { select = true } = {}) {
   const record = await getRecord(id);
+  if (!record) {
+    return null;
+  }
+  const tab = openRecord(record, preferred, { select });
+  if (tab) {
+    await removeRecord(id);
+  }
+  return tab;
+}
+
+/**
+ * Opens a record's tab right away, for callers that must open it in the
+ * same task (the Library keeps itself open only around a synchronous call).
+ * The caller takes the record out of the store.
+ *
+ * @param {object} record - From the store
+ * @param {Window} [preferred] - The window to open it in
+ * @param {object} [options]
+ * @param {boolean} [options.select]
+ * @returns {MozTabbrowserTab|null} Null when there is no window to open it in
+ */
+export function openRecord(record, preferred, { select = true } = {}) {
   const win = targetWindow(preferred);
-  if (!record || !win) {
+  if (!win) {
     return null;
   }
   let workspaceId;
@@ -364,7 +405,6 @@ export async function restoreRecord(id, preferred, { select = true } = {}) {
   if (select) {
     win.gBrowser.selectedTab = tab;
   }
-  await removeRecord(id);
   return tab;
 }
 
