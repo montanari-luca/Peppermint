@@ -1,6 +1,62 @@
 --- a/zen/media/ZenMediaController.sys.mjs
 +++ b/zen/media/ZenMediaController.sys.mjs
-@@ -228,12 +228,32 @@
+@@ -22,6 +22,10 @@
+  */
+ class ZenMediaCard {
+   #updateInterval = null;
++  // `position` was right at `#positionAt`, and moves on from there while
++  // `#advancing`; the clock only needs to tick while someone can see it.
++  #positionAt = 0;
++  #advancing = false;
+   #tabTimeout = null;
+   #controllerListeners = null;
+ 
+@@ -136,10 +140,36 @@
+   }
+ 
+   #onPlaybackstateChange() {
++    this.position = this.#currentPosition();
++    this.#positionAt = Date.now();
++    this.#advancing = this.controller.isPlaying;
+     this.element.classList.toggle("playing", this.controller.isPlaying);
+     this.updatePosition();
+   }
+ 
++  #currentPosition() {
++    if (!this.#advancing || !this.duration) {
++      return this.position;
++    }
++    const elapsed = (Date.now() - this.#positionAt) / 1000;
++    return Math.min(
++      this.duration,
++      this.position + elapsed * (this.playbackRate || 1)
++    );
++  }
++
++  get #isSeen() {
++    return (
++      !this.element.hidden && this.window.document.visibilityState === "visible"
++    );
++  }
++
++  #paintPosition() {
++    const position = this.#currentPosition();
++    this.currentTimeEl.textContent = this.formatSecondsToTime(position);
++    this.progressBar.value = (position / this.duration) * 100;
++  }
++
+   #onSupportedKeysChange() {
+     this.updateSupportedKeys();
+   }
+@@ -172,6 +202,7 @@
+       if (this.element.hidden) {
+         this.element.hidden = false;
+         this.manager.onCardVisibilityChanged();
++        this.updatePosition();
+       }
+       return;
+     }
+@@ -228,12 +259,32 @@
    }
  
    updateLabelOverflows() {
@@ -37,7 +93,44 @@
    }
  
    updateSupportedKeys() {
-@@ -451,10 +471,9 @@
+@@ -247,6 +298,8 @@
+     this.position = positionState.position;
+     this.duration = positionState.duration;
+     this.playbackRate = positionState.playbackRate;
++    this.#positionAt = Date.now();
++    this.#advancing = !!this.controller?.isPlaying;
+     this.updatePosition();
+   }
+ 
+@@ -266,20 +319,15 @@
+       return;
+     }
+ 
+-    this.currentTimeEl.textContent = this.formatSecondsToTime(this.position);
+-    this.durationEl.textContent = this.formatSecondsToTime(this.duration);
+-    this.progressBar.value = (this.position / this.duration) * 100;
++    this.durationEl.textContent = this.formatSecondsToTime(this.duration);
++    this.#paintPosition();
+ 
++    if (!this.#advancing || !this.#isSeen) {
++      return;
++    }
+     this.#updateInterval = this.window.setInterval(() => {
+-      if (this.controller?.isPlaying) {
+-        this.position += 1 * this.playbackRate;
+-        if (this.position > this.duration) {
+-          this.position = this.duration;
+-        }
+-        this.currentTimeEl.textContent = this.formatSecondsToTime(
+-          this.position
+-        );
+-        this.progressBar.value = (this.position / this.duration) * 100;
++      if (this.controller?.isPlaying && this.#isSeen) {
++        this.#paintPosition();
+       } else {
+         this.window.clearInterval(this.#updateInterval);
+         this.#updateInterval = null;
+@@ -451,10 +499,9 @@
        // Animate the card out instead of popping it away. It leaves the
        // flex flow immediately (so the remaining cards re-slot right away)
        // but stays anchored where it currently is while it sinks and fades.
@@ -51,14 +144,28 @@
        element.setAttribute("zen-removing", "true");
        // Resolves once the exit transitions finish or get cancelled, and
        // immediately if they never start (e.g. reduced motion).
-@@ -721,18 +740,18 @@
-       card.element.style.setProperty("--zen-media-card-index", index);
+@@ -499,6 +546,14 @@
+       }
+     });
+ 
++    // A minimized or covered window stops the cards' clocks; they catch up
++    // when it is shown again.
++    this.document.addEventListener("visibilitychange", () => {
++      for (const card of this.#cards.values()) {
++        card.updatePosition();
++      }
++    });
++
+     const onTabDiscardedOrClosed = this.onTabDiscardedOrClosed.bind(this);
+ 
+     this.window.addEventListener("TabClose", onTabDiscardedOrClosed);
+@@ -722,18 +777,20 @@
        card.element.style.zIndex = 100 - index;
      });
--
+ 
 -    // Flush styles so the re-slotting lands instantly...
 -    this.mediaControlBar.getBoundingClientRect();
- 
+-
 -    // ...then animate only the peek level: demoted cards slide up from
 -    // behind the front card instead of dropping in from above.
 -    visibleCards.forEach((card, index) => {
@@ -67,27 +174,31 @@
 -        "--zen-media-card-peek-level",
 -        Math.min(index, MAX_PEEK_LEVELS)
 -      );
-+    this.window.promiseDocumentFlushed(() => true).then(() => {
-+      if (!this.mediaControlBar?.isConnected) {
-+        return;
-+      }
-+      visibleCards.forEach((card, index) => {
-+        card.element.removeAttribute("zen-reindexing");
-+        card.element.style.setProperty(
-+          "--zen-media-card-peek-level",
-+          Math.min(index, MAX_PEEK_LEVELS)
-+        );
+-    });
++    this.window
++      .promiseDocumentFlushed(() => true)
++      .then(() => {
++        if (!this.mediaControlBar?.isConnected) {
++          return;
++        }
++        visibleCards.forEach((card, index) => {
++          card.element.removeAttribute("zen-reindexing");
++          card.element.style.setProperty(
++            "--zen-media-card-peek-level",
++            Math.min(index, MAX_PEEK_LEVELS)
++          );
++        });
 +      });
-     });
  
      const stackedCount = Math.min(visibleCards.length, MAX_STACKED_CARDS);
-@@ -797,7 +816,8 @@
+     this.mediaControlBar.style.setProperty(
+@@ -797,7 +854,8 @@
  
        this.mediaControlBar.style.setProperty(
          "--zen-media-collapsed-height",
 -        front.element.getBoundingClientRect().height + "px"
-+        this.window.windowUtils.getBoundsWithoutFlushing(front.element)
-+          .height + "px"
++        this.window.windowUtils.getBoundsWithoutFlushing(front.element).height +
++          "px"
        );
        this.mediaControlBar.style.opacity = 0;
        this.window.gZenUIManager.updateTabsToolbar();

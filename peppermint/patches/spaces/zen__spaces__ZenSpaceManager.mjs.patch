@@ -52,20 +52,20 @@
        let tab = gZenUIManager.openAndChangeToTab(newTabUrl);
  
        // Set workspace ID if available
-@@ -327,6 +332,13 @@
-     );
-   }
- 
+@@ -324,6 +329,13 @@
+   get tabboxChildrenWithoutEmpty() {
+     return this.tabboxChildren.filter(
+       child => !child.hasAttribute("zen-empty-tab")
++    );
++  }
++
 +  get spaceSwitchAnimationEnabled() {
 +    return (
 +      !gReduceMotion &&
 +      Services.prefs.getBoolPref("zen.workspaces.switch-animation", true)
-+    );
-+  }
-+
-   get shouldAnimateEssentials() {
-     return this.containerSpecificEssentials || !!this.creatingWorkspaceId;
+     );
    }
+ 
 @@ -364,6 +376,7 @@
      if (markupTabs.length) {
        gBrowser.tabContainer._invalidateCachedTabs();
@@ -111,7 +111,7 @@
      const getFolderRoot = tab => {
        let root = tab?.group;
        while (root?.group) {
-@@ -514,31 +540,47 @@
+@@ -514,32 +540,48 @@
        }
        return root || tab;
      };
@@ -153,8 +153,8 @@
        } else {
 -        section.insertBefore(tab, section.firstChild);
 +        unpinned.push(node);
-+      }
-+    }
+       }
+     }
 +    if (removed.size) {
 +      const kept = tabs.filter(tab => !removed.has(tab));
 +      tabs.length = 0;
@@ -171,11 +171,12 @@
 +      const fragment = document.createDocumentFragment();
 +      for (const node of unpinned) {
 +        fragment.appendChild(node);
-       }
++      }
 +      section.prepend(fragment);
-     }
++    }
    }
  
+   /** @type {Map<Element, DocumentFragment>|null} */
 @@ -935,7 +977,7 @@
      this.activeWorkspace = activeWorkspace?.uuid;
      try {
@@ -232,7 +233,31 @@
        tabToSelect,
        {
          previousWorkspaceIndex,
-@@ -2907,16 +2960,22 @@
+@@ -2774,12 +2827,17 @@
+       }
+     }
+ 
+-    // Avoid forcing a startup toolbar rebuild when there are no
+-    // workspace-specific bookmark assignments to apply.
+-    const hasWorkspaceBookmarks = !!Object.keys(
+-      this._workspaceBookmarksCache?.bookmarks || {}
+-    ).length;
+-    if (!onInit || hasWorkspaceBookmarks) {
++    // A bookmark tied to spaces shows only in those spaces. At startup the
++    // toolbar was built before any space was known, so any such bookmark
++    // means a rebuild; later, only the space left or the space entered can
++    // change what shows.
++    const spaceBookmarks = this._workspaceBookmarksCache?.bookmarks || {};
++    const hasOwnBookmarks = uuid => !!uuid && !!spaceBookmarks[uuid]?.length;
++    const needsRebuild = onInit
++      ? Object.values(spaceBookmarks).some(guids => guids?.length)
++      : hasOwnBookmarks(workspace.uuid) ||
++        hasOwnBookmarks(previousWorkspace?.uuid);
++    if (needsRebuild) {
+       this._invalidateBookmarkContainers();
+     }
+ 
+@@ -2907,16 +2965,22 @@
        let label =
          ContextualIdentityService.getUserContextLabel(containerTabId) ||
          "Default";
@@ -241,13 +266,13 @@
        if (this.isPrivateWindow) {
          icon = "chrome://browser/skin/zen-icons/private-window-small.svg";
        }
-     }
++    }
 +    let theme = null;
 +    try {
 +      theme = lazy.nsZenThemePicker.getTheme();
 +    } catch (error) {
 +      console.error("gZenWorkspaces: Error reading the default theme", error);
-+    }
+     }
      let workspace = {
        uuid: gZenUIManager.generateUuidv4(),
        icon,
@@ -257,7 +282,7 @@
        containerTabId,
      };
      return workspace;
-@@ -3011,14 +3070,21 @@
+@@ -3011,14 +3075,21 @@
  
    #allPinnedContainers() {
      const containers = [];
@@ -286,7 +311,7 @@
      return containers.length ? containers : [this.pinnedTabsContainer];
    }
  
-@@ -3196,6 +3262,7 @@
+@@ -3196,6 +3267,7 @@
        isEmpty
      );
      document.documentElement.setAttribute("zen-has-empty-tab", isEmpty);
@@ -294,7 +319,7 @@
    }
  
    async onLocationChange(event) {
-@@ -3472,6 +3539,24 @@
+@@ -3472,6 +3544,24 @@
    }
  
    // Session restore functions
@@ -319,7 +344,7 @@
    get allStoredTabs() {
      if (this._allStoredTabs) {
        return this._allStoredTabs;
-@@ -3759,6 +3844,7 @@
+@@ -3759,6 +3849,7 @@
          pinnedContainer.insertBefore(tab, pinnedContainer.lastChild);
        }
      }
