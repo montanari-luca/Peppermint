@@ -1,75 +1,19 @@
 --- a/zen/sessionstore/ZenSessionManager.sys.mjs
 +++ b/zen/sessionstore/ZenSessionManager.sys.mjs
-@@ -98,7 +98,60 @@
+@@ -98,6 +98,8 @@
     * A deferred task to create backups of the session file.
     */
    #deferredBackupTask = null;
-+  #lastSidebarFingerprint = "";
++  #lastSidebarSerialized = "";
 +  #cleanBackupCopied = false;
  
-+  /**
-+   * Forces the next save to rewrite the sidebar file. Mutations that are not
-+   * yet visible on the SessionSaver snapshot should call this.
-+   */
-+  markSidebarDirty() {
-+    this.#lastSidebarFingerprint = "";
-+  }
-+
-+  #sidebarFingerprint(windows) {
-+    const parts = [];
-+    for (const win of windows) {
-+      parts.push(
-+        (win.spaces || [])
-+          .map(space =>
-+            [
-+              space.uuid,
-+              space.name,
-+              space.icon,
-+              space.containerTabId,
-+              space.theme?.type,
-+            ].join(":")
-+          )
-+          .join(",")
-+      );
-+      parts.push(
-+        (win.folders || [])
-+          .map(folder => [folder.id, folder.name, folder.workspaceId].join(":"))
-+          .join(",")
-+      );
-+      parts.push(
-+        (win.groups || []).map(group => group.id || "").join(","),
-+        (win.splitViewData || [])
-+          .map(split => split.groupId || split.id || "")
-+          .join(",")
-+      );
-+      for (const tab of win.tabs || []) {
-+        const entry = tab.entries?.[Math.max(0, (tab.index || 1) - 1)];
-+        parts.push(
-+          [
-+            tab.zenSyncId,
-+            tab.pinned ? 1 : 0,
-+            tab.zenEssential ? 1 : 0,
-+            tab._zenIsActiveTab ? 1 : 0,
-+            entry?.url || "",
-+          ].join(":")
-+        );
-+      }
-+    }
-+    return parts.join("\n");
-+  }
-+
    init() {
      this.log("Initializing session manager");
-     let backupTo = null;
-@@ -608,12 +661,19 @@
+@@ -608,12 +610,15 @@
        // browsing mode. We also don't want to save if there are no windows.
        return;
      }
 -    if (this.#sidebarWithoutCloning?.spaces?.length) {
-+    const fingerprint = this.#sidebarFingerprint(windows);
-+    if (fingerprint === this.#lastSidebarFingerprint) {
-+      return;
-+    }
 +    if (
 +      !this.#cleanBackupCopied &&
 +      this.#sidebarWithoutCloning?.spaces?.length
@@ -84,11 +28,29 @@
          }
        );
      }
-@@ -631,6 +691,7 @@
+@@ -621,8 +626,16 @@
+     // Let interested consumers (e.g. Firefox Sync) know fresh sidebar data
+     // is available, without this module knowing anything about them.
+     Services.obs.notifyObservers(null, "zen-sidebar-data-collected");
+-    // This would save the data to disk asynchronously or when quitting the app.
+     let sidebar = this.#sidebarWithoutCloning;
++    // Only an identical sidebar skips the write, so no change is lost.
++    // lastCollected changes on every collection, so it is left out.
++    const content = { ...sidebar };
++    delete content.lastCollected;
++    const serialized = JSON.stringify(content);
++    if (serialized === this.#lastSidebarSerialized) {
++      return;
++    }
++    // This would save the data to disk asynchronously or when quitting the app.
+     this.#file.data = sidebar;
+     if (soon) {
+       this.#file.saveSoon();
+@@ -631,6 +644,7 @@
      }
      lazy.ZenLiveFoldersManager.saveState(soon);
      this.#debounceRegeneration();
-+    this.#lastSidebarFingerprint = fingerprint;
++    this.#lastSidebarSerialized = serialized;
      this.log(`Saving Zen session data with ${sidebar.tabs?.length || 0} tabs`);
    }
  
