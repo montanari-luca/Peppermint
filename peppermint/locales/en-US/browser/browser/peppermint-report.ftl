@@ -57,6 +57,9 @@ peppermint-report-startup-empty = Restart Peppermint to measure how long it take
 peppermint-report-startup-last = Last start
 peppermint-report-startup-typical = Typical start
 peppermint-report-startup-peppermint = Peppermint features at startup
+# $duration (String) - how long the features that start before the window
+# first appears take, already formatted, for example "12 ms".
+peppermint-report-startup-before-paint = { $duration } before the window appears
 # $count (Number) - how many launches the typical start is taken from.
 peppermint-report-startup-launches =
     { $count ->

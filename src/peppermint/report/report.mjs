@@ -416,6 +416,15 @@ function renderStartup(startup) {
   );
   startupTiles.peppermint.querySelector(".report-value").textContent =
     formatDuration(startup.peppermintMs);
+  const paintHint = startupTiles.peppermint.querySelector(".report-hint");
+  paintHint.hidden = startup.paintMs == null;
+  if (startup.paintMs != null) {
+    document.l10n.setAttributes(
+      paintHint,
+      "peppermint-report-startup-before-paint",
+      { duration: formatDuration(startup.paintMs) }
+    );
+  }
 
   const slowFeatures = new Set(
     startup.tips.filter(tip => tip.id == "feature").map(tip => tip.feature.id)

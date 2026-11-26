@@ -53,10 +53,6 @@ class PeppermintVaultImpl {
   init(window) {
     if (!this.#started) {
       this.#started = true;
-      PeppermintVaultRegistry.register(LoginsSection);
-      PeppermintVaultRegistry.register(CodesSection);
-      PeppermintVaultRegistry.register(PermissionsSection);
-      PeppermintVaultRegistry.register(PermissionHistorySection);
       Services.obs.addObserver(this, "passwordmgr-primary-pw-changed");
       if (Cu.isInAutomation) {
         return;
@@ -273,5 +269,12 @@ class PeppermintVaultImpl {
     };
   }
 }
+
+// Startup only imports this module once Vault is on, but about:vault and
+// the settings import it while it is still off, and need the sections then.
+PeppermintVaultRegistry.register(LoginsSection);
+PeppermintVaultRegistry.register(CodesSection);
+PeppermintVaultRegistry.register(PermissionsSection);
+PeppermintVaultRegistry.register(PermissionHistorySection);
 
 export const PeppermintVault = new PeppermintVaultImpl();

@@ -6,6 +6,16 @@
  * Single entry point for everything Peppermint starts alongside Zen. Zen's
  * ZenStartup calls early() before the layout is built and late() after it, so
  * adding or removing a Peppermint feature never touches Zen's own files.
+ *
+ * late() starts each feature in one of three phases, so the first frame only
+ * waits for what it shows:
+ * - paint: before the first frame, for what the first frame or the first page
+ *   load needs;
+ * - delayed: once the window's delayed startup is done (toolbar hooks,
+ *   address bar providers, panels);
+ * - idle: when the main thread is next idle, for background work.
+ * A feature with `when` is not even imported until it returns true; a change
+ * to one of its `prefs` asks again in every open window.
  */
 
 const lazy = {};
@@ -14,20 +24,17 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///peppermint/startup-doctor/PeppermintStartupDoctor.sys.mjs",
 });
 
-// Each feature starts independently: one failing never blocks the others.
-// The startup doctor times each one in the first window (see about:report).
-function start(name, run) {
-  try {
-    lazy.PeppermintStartupDoctor.measure(name, run);
-  } catch (error) {
-    console.error(`${name} failed to start`, error);
-  }
-}
+export const PAINT = "paint";
+export const DELAYED = "delayed";
+export const IDLE = "idle";
+// Idle work still runs this long after delayed startup on a busy machine.
+const IDLE_TIMEOUT_MS = 5000;
 
 const SIDEBAR_STYLE_URL =
   "chrome://browser/content/zen-styles/peppermint-sidebar.css";
 
-const IDLE_STYLE_URL = "chrome://browser/content/zen-styles/peppermint-idle.css";
+const IDLE_STYLE_URL =
+  "chrome://browser/content/zen-styles/peppermint-idle.css";
 
 const FOLDER_ICON_STYLE_URL =
   "chrome://browser/content/zen-styles/peppermint-folder-icon.css";
@@ -43,165 +50,406 @@ function loadStyle(window, href) {
   (doc.querySelector("linkset") || doc.documentElement).appendChild(link);
 }
 
+function load(url) {
+  return ChromeUtils.importESModule(url);
+}
+
+function boolPref(prefName, fallback = false) {
+  return Services.prefs.getBoolPref(prefName, fallback);
+}
+
+const FEATURES = [
+  // paint
+  {
+    name: "PeppermintActivity",
+    phase: PAINT,
+    run: win =>
+      load(
+        "moz-src:///peppermint/common/PeppermintActivity.sys.mjs"
+      ).PeppermintActivity.init(win),
+  },
+  {
+    name: "Peppermint sidebar styles",
+    phase: PAINT,
+    run: win => loadStyle(win, SIDEBAR_STYLE_URL),
+  },
+  {
+    name: "Peppermint folder icon",
+    phase: PAINT,
+    run: win => loadStyle(win, FOLDER_ICON_STYLE_URL),
+  },
+  {
+    name: "Peppermint idle styles",
+    phase: PAINT,
+    run: win => loadStyle(win, IDLE_STYLE_URL),
+  },
+  // A restored mint:// tab loads before delayed startup.
+  {
+    name: "Notepad watcher",
+    phase: PAINT,
+    run: win =>
+      load("resource:///actors/ZenNotepadParent.sys.mjs").watchMintDocuments(
+        win
+      ),
+  },
+  // The first pages ask it whether to handle their banners.
+  {
+    name: "ZenCookieConsent",
+    phase: PAINT,
+    run: () =>
+      load(
+        "resource:///modules/zen/cookieconsent/ZenCookieConsentManager.sys.mjs"
+      ).gZenCookieConsent.init(),
+  },
+  // An external link can open together with the first window.
+  {
+    name: "PeppermintLookalike",
+    phase: PAINT,
+    run: win =>
+      load(
+        "moz-src:///peppermint/lookalike/PeppermintLookalike.sys.mjs"
+      ).PeppermintLookalike.init(win),
+  },
+  // Its toolbar button and the frozen-tab state are part of the first frame.
+  {
+    name: "ZenUnderpowered",
+    phase: PAINT,
+    run: () =>
+      load(
+        "moz-src:///peppermint/underpowered/ZenUnderpowered.sys.mjs"
+      ).ZenUnderpowered.init(),
+  },
+  {
+    name: "PeppermintGhostMode",
+    phase: PAINT,
+    run: () =>
+      load(
+        "moz-src:///peppermint/ghost-mode/PeppermintGhostMode.sys.mjs"
+      ).PeppermintGhostMode.init(),
+  },
+  {
+    name: "PeppermintTabNumbers",
+    phase: PAINT,
+    run: win =>
+      load(
+        "moz-src:///peppermint/tab-numbers/PeppermintTabNumbers.sys.mjs"
+      ).PeppermintTabNumbers.init(win),
+  },
+  // Restored tabs keep their islands.
+  {
+    name: "PeppermintTabIslands",
+    phase: PAINT,
+    run: win =>
+      load(
+        "moz-src:///peppermint/tab-islands/PeppermintTabIslands.sys.mjs"
+      ).PeppermintTabIslands.init(win),
+  },
+
+  // delayed
+  {
+    name: "Peppermint actions",
+    phase: DELAYED,
+    run: () =>
+      load(
+        "moz-src:///peppermint/common/PeppermintActions.sys.mjs"
+      ).registerPeppermintActions(),
+  },
+  {
+    name: "Popular sites suggestions",
+    phase: DELAYED,
+    run: () =>
+      load(
+        "moz-src:///peppermint/urlbar/PeppermintUrlbarProviderPopularSites.sys.mjs"
+      ).registerPopularSitesProvider(),
+  },
+  {
+    name: "Tab search",
+    phase: DELAYED,
+    run: () =>
+      load(
+        "moz-src:///peppermint/urlbar/PeppermintUrlbarProviderTabSearch.sys.mjs"
+      ).registerTabSearchProvider(),
+  },
+  {
+    name: "Omni utils",
+    phase: DELAYED,
+    run: () =>
+      load(
+        "moz-src:///peppermint/omni-utils/PeppermintUrlbarProviderOmniUtils.sys.mjs"
+      ).registerOmniUtilsProvider(),
+  },
+  {
+    name: "Tab archive search",
+    phase: DELAYED,
+    run: () =>
+      load(
+        "moz-src:///peppermint/tab-archive/PeppermintUrlbarProviderArchive.sys.mjs"
+      ).registerArchiveProvider(),
+  },
+  {
+    name: "PeppermintReader",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/reader/PeppermintReader.sys.mjs"
+      ).PeppermintReader.init(win),
+  },
+  {
+    name: "PeppermintScreenshotEditor",
+    phase: DELAYED,
+    prefs: ["peppermint.screenshot.editor.enabled"],
+    when: () => boolPref("peppermint.screenshot.editor.enabled", true),
+    run: () =>
+      load(
+        "moz-src:///peppermint/screenshot-editor/PeppermintScreenshotEditor.sys.mjs"
+      ).initScreenshotEditor(),
+  },
+  {
+    name: "PeppermintUndoClose",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/undo-close/PeppermintUndoClose.sys.mjs"
+      ).PeppermintUndoClose.init(win),
+  },
+  {
+    name: "PeppermintShortcutSheet",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/shortcut-sheet/PeppermintShortcutSheet.sys.mjs"
+      ).PeppermintShortcutSheet.init(win),
+  },
+  {
+    name: "PeppermintShortcutTooltips",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/shortcut-tooltips/PeppermintShortcutTooltips.sys.mjs"
+      ).PeppermintShortcutTooltips.init(win),
+  },
+  {
+    name: "PeppermintUpdater",
+    phase: DELAYED,
+    run: () =>
+      load(
+        "moz-src:///peppermint/updater/PeppermintUpdaterUI.sys.mjs"
+      ).PeppermintUpdaterUI.init(),
+  },
+  {
+    name: "PeppermintVault",
+    phase: DELAYED,
+    prefs: ["peppermint.vault.enabled"],
+    when: () => boolPref("peppermint.vault.enabled"),
+    run: win =>
+      load(
+        "moz-src:///peppermint/vault/PeppermintVault.sys.mjs"
+      ).PeppermintVault.init(win),
+  },
+  {
+    name: "PeppermintSitePrivacy",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/site-privacy/PeppermintSitePrivacy.sys.mjs"
+      ).PeppermintSitePrivacy.init(win),
+  },
+  {
+    name: "PeppermintSyncOverride",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/sync-override/PeppermintSyncOverride.sys.mjs"
+      ).PeppermintSyncOverride.initWindow(win),
+  },
+  {
+    name: "PeppermintFeatureTour",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/feature-tour/PeppermintFeatureTour.sys.mjs"
+      ).PeppermintFeatureTour.init(win),
+  },
+
+  // idle
+  {
+    name: "Live folders idle",
+    phase: IDLE,
+    run: () =>
+      load(
+        "moz-src:///peppermint/common/PeppermintLiveFoldersIdle.sys.mjs"
+      ).pauseLiveFoldersWhenInactive(),
+  },
+  {
+    name: "PeppermintTabArchive",
+    phase: IDLE,
+    run: () =>
+      load(
+        "moz-src:///peppermint/tab-archive/PeppermintTabArchive.sys.mjs"
+      ).initTabArchive(),
+  },
+  // Runs while on, and once while off to ask whether to turn it on.
+  {
+    name: "PeppermintJanitor",
+    phase: IDLE,
+    prefs: ["peppermint.janitor.enabled"],
+    when: () =>
+      boolPref("peppermint.janitor.enabled") ||
+      !boolPref("peppermint.janitor.prompted"),
+    run: win =>
+      load(
+        "moz-src:///peppermint/janitor/PeppermintJanitor.sys.mjs"
+      ).PeppermintJanitor.init(win),
+  },
+  {
+    name: "PeppermintPermissionAutoRevoke",
+    phase: IDLE,
+    run: () =>
+      load(
+        "moz-src:///peppermint/vault/PeppermintPermissionAutoRevoke.sys.mjs"
+      ).PeppermintPermissionAutoRevoke.start(),
+  },
+];
+
+// Each feature starts independently: one failing never blocks the others.
+// The startup doctor times each one in the first window (see about:report).
+function start(feature, win) {
+  try {
+    lazy.PeppermintStartupDoctor.measure(
+      feature.name,
+      () => feature.run(win),
+      feature.phase
+    );
+  } catch (error) {
+    console.error(`${feature.name} failed to start`, error);
+  }
+}
+
+// Windows whose phase has run, so a pref change starts a gated feature
+// only where its phase has come.
+const reached = {
+  [PAINT]: new WeakSet(),
+  [DELAYED]: new WeakSet(),
+  [IDLE]: new WeakSet(),
+};
+// Gated features already started, per window.
+const gatedStarted = new WeakMap();
+let prefsObserved = false;
+
+function allowed(feature, win) {
+  if (!feature.when) {
+    return true;
+  }
+  try {
+    return !!feature.when(win);
+  } catch (error) {
+    console.error(`${feature.name} could not check whether to start`, error);
+    return false;
+  }
+}
+
+function runPhase(win, phase) {
+  if (win.closed || reached[phase].has(win)) {
+    return;
+  }
+  reached[phase].add(win);
+  for (const feature of FEATURES) {
+    if (feature.phase !== phase || !allowed(feature, win)) {
+      continue;
+    }
+    if (feature.when) {
+      let started = gatedStarted.get(win);
+      if (!started) {
+        started = new Set();
+        gatedStarted.set(win, started);
+      }
+      started.add(feature.name);
+    }
+    start(feature, win);
+  }
+}
+
+function startGatedNow(prefName) {
+  for (const feature of FEATURES) {
+    if (!feature.prefs?.includes(prefName)) {
+      continue;
+    }
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      if (
+        win.closed ||
+        !reached[feature.phase].has(win) ||
+        gatedStarted.get(win)?.has(feature.name) ||
+        !allowed(feature, win)
+      ) {
+        continue;
+      }
+      let started = gatedStarted.get(win);
+      if (!started) {
+        started = new Set();
+        gatedStarted.set(win, started);
+      }
+      started.add(feature.name);
+      start(feature, win);
+    }
+  }
+}
+
+function observeGatePrefs() {
+  if (prefsObserved) {
+    return;
+  }
+  prefsObserved = true;
+  const observer = (_subject, _topic, prefName) => startGatedNow(prefName);
+  for (const prefName of new Set(
+    FEATURES.flatMap(feature => feature.prefs ?? [])
+  )) {
+    Services.prefs.addObserver(prefName, observer);
+  }
+}
+
+let firstWindowDone = false;
+
 export const PeppermintStartup = {
   early() {
-    start("ZenTabUnloader", () =>
-      ChromeUtils.importESModule(
-        "resource:///modules/zen/ZenTabUnloader.sys.mjs"
-      ).ZenTabUnloader.start()
+    start(
+      {
+        name: "ZenTabUnloader",
+        phase: PAINT,
+        run: () =>
+          load(
+            "resource:///modules/zen/ZenTabUnloader.sys.mjs"
+          ).ZenTabUnloader.start(),
+      },
+      null
     );
-    start("PeppermintCleanLinks", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/clean-links/PeppermintCleanLinks.sys.mjs"
-      ).PeppermintCleanLinks.start()
-    );
-    start("Peppermint actions", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/common/PeppermintActions.sys.mjs"
-      ).registerPeppermintActions()
+    start(
+      {
+        name: "PeppermintCleanLinks",
+        phase: PAINT,
+        run: () =>
+          load(
+            "moz-src:///peppermint/clean-links/PeppermintCleanLinks.sys.mjs"
+          ).PeppermintCleanLinks.start(),
+      },
+      null
     );
   },
 
   late(window) {
-    start("PeppermintActivity", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/common/PeppermintActivity.sys.mjs"
-      ).PeppermintActivity.init(window)
-    );
-    start("Peppermint sidebar styles", () =>
-      loadStyle(window, SIDEBAR_STYLE_URL)
-    );
-    start("Peppermint folder icon", () =>
-      loadStyle(window, FOLDER_ICON_STYLE_URL)
-    );
-    start("Live folders idle", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/common/PeppermintLiveFoldersIdle.sys.mjs"
-      ).pauseLiveFoldersWhenInactive()
-    );
-    start("Peppermint idle styles", () => loadStyle(window, IDLE_STYLE_URL));
-    start("Popular sites suggestions", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/urlbar/PeppermintUrlbarProviderPopularSites.sys.mjs"
-      ).registerPopularSitesProvider()
-    );
-    start("Tab search", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/urlbar/PeppermintUrlbarProviderTabSearch.sys.mjs"
-      ).registerTabSearchProvider()
-    );
-    start("Omni utils", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/omni-utils/PeppermintUrlbarProviderOmniUtils.sys.mjs"
-      ).registerOmniUtilsProvider()
-    );
-    start("Tab archive search", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/tab-archive/PeppermintUrlbarProviderArchive.sys.mjs"
-      ).registerArchiveProvider()
-    );
-    start("PeppermintTabArchive", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/tab-archive/PeppermintTabArchive.sys.mjs"
-      ).initTabArchive()
-    );
-    start("PeppermintScreenshotEditor", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/screenshot-editor/PeppermintScreenshotEditor.sys.mjs"
-      ).initScreenshotEditor()
-    );
-    start("Notepad watcher", () =>
-      ChromeUtils.importESModule(
-        "resource:///actors/ZenNotepadParent.sys.mjs"
-      ).watchMintDocuments(window)
-    );
-    start("ZenCookieConsent", () =>
-      ChromeUtils.importESModule(
-        "resource:///modules/zen/cookieconsent/ZenCookieConsentManager.sys.mjs"
-      ).gZenCookieConsent.init()
-    );
-    start("PeppermintReader", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/reader/PeppermintReader.sys.mjs"
-      ).PeppermintReader.init(window)
-    );
-    start("ZenUnderpowered", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/underpowered/ZenUnderpowered.sys.mjs"
-      ).ZenUnderpowered.init()
-    );
-    start("PeppermintGhostMode", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/ghost-mode/PeppermintGhostMode.sys.mjs"
-      ).PeppermintGhostMode.init()
-    );
-    start("PeppermintJanitor", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/janitor/PeppermintJanitor.sys.mjs"
-      ).PeppermintJanitor.init(window)
-    );
-    start("PeppermintTabNumbers", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/tab-numbers/PeppermintTabNumbers.sys.mjs"
-      ).PeppermintTabNumbers.init(window)
-    );
-    start("PeppermintTabIslands", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/tab-islands/PeppermintTabIslands.sys.mjs"
-      ).PeppermintTabIslands.init(window)
-    );
-    start("PeppermintUndoClose", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/undo-close/PeppermintUndoClose.sys.mjs"
-      ).PeppermintUndoClose.init(window)
-    );
-    start("PeppermintShortcutSheet", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/shortcut-sheet/PeppermintShortcutSheet.sys.mjs"
-      ).PeppermintShortcutSheet.init(window)
-    );
-    start("PeppermintShortcutTooltips", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/shortcut-tooltips/PeppermintShortcutTooltips.sys.mjs"
-      ).PeppermintShortcutTooltips.init(window)
-    );
-    start("PeppermintUpdater", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/updater/PeppermintUpdaterUI.sys.mjs"
-      ).PeppermintUpdaterUI.init()
-    );
-    start("PeppermintVault", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/vault/PeppermintVault.sys.mjs"
-      ).PeppermintVault.init(window)
-    );
-    start("PeppermintSitePrivacy", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/site-privacy/PeppermintSitePrivacy.sys.mjs"
-      ).PeppermintSitePrivacy.init(window)
-    );
-    start("PeppermintLookalike", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/lookalike/PeppermintLookalike.sys.mjs"
-      ).PeppermintLookalike.init(window)
-    );
-    start("PeppermintPermissionAutoRevoke", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/vault/PeppermintPermissionAutoRevoke.sys.mjs"
-      ).PeppermintPermissionAutoRevoke.start()
-    );
-    start("PeppermintSyncOverride", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/sync-override/PeppermintSyncOverride.sys.mjs"
-      ).PeppermintSyncOverride.initWindow(window)
-    );
-    start("PeppermintFeatureTour", () =>
-      ChromeUtils.importESModule(
-        "moz-src:///peppermint/feature-tour/PeppermintFeatureTour.sys.mjs"
-      ).PeppermintFeatureTour.init(window)
-    );
-    start("PeppermintStartupDoctor", () =>
-      lazy.PeppermintStartupDoctor.firstWindowReady()
-    );
+    observeGatePrefs();
+    runPhase(window, PAINT);
+    window.delayedStartupPromise.then(() => {
+      runPhase(window, DELAYED);
+      ChromeUtils.idleDispatch(
+        () => {
+          runPhase(window, IDLE);
+          if (!firstWindowDone) {
+            firstWindowDone = true;
+            lazy.PeppermintStartupDoctor.firstWindowReady();
+          }
+        },
+        { timeout: IDLE_TIMEOUT_MS }
+      );
+    });
   },
 };

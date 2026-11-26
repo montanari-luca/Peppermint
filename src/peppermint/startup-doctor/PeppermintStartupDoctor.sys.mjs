@@ -63,6 +63,7 @@ function cleanLaunch(raw) {
     firstPaintMs: number(raw.firstPaintMs),
     restoredMs: number(raw.restoredMs),
     peppermintMs: number(raw.peppermintMs) ?? 0,
+    paintMs: number(raw.paintMs),
     features,
   };
 }
@@ -129,6 +130,8 @@ function milestones() {
 class StartupDoctor {
   // Feature start times in the first window of this launch.
   #features = {};
+  // Names of the features that start before the first frame.
+  #beforePaint = new Set();
   #recording = true;
 
   /**
@@ -136,11 +139,15 @@ class StartupDoctor {
    *
    * @param {string} name - The feature, as PeppermintStartup names it
    * @param {Function} run
+   * @param {string} [phase] - "paint" when it runs before the first frame
    */
-  measure(name, run) {
+  measure(name, run, phase = "paint") {
     if (!this.#recording) {
       run();
       return;
+    }
+    if (phase == "paint") {
+      this.#beforePaint.add(name);
     }
     const start = ChromeUtils.now();
     try {
@@ -152,8 +159,9 @@ class StartupDoctor {
   }
 
   /**
-   * Called once the first window has started every feature. Records the
-   * launch when the session is back and the browser is idle.
+   * Called once the first window has started every feature, in every
+   * phase. Records the launch when the session is back and the browser is
+   * idle.
    */
   firstWindowReady() {
     if (!this.#recording) {
@@ -165,9 +173,12 @@ class StartupDoctor {
     }
     // A copy, so the doctor's own start is left out.
     const features = { ...this.#features };
+    const paintMs = Object.entries(features)
+      .filter(([name]) => this.#beforePaint.has(name))
+      .reduce((sum, [, ms]) => sum + ms, 0);
     const record = () =>
       ChromeUtils.idleDispatch(() =>
-        this.recordLaunch({ features, ...milestones() }).catch(error =>
+        this.recordLaunch({ features, paintMs, ...milestones() }).catch(error =>
           console.error("The startup could not be recorded", error)
         )
       );
@@ -319,6 +330,7 @@ export async function collectStartup() {
     typicalMs: median(launches.map(launch => launch.firstPaintMs)),
     restoredMs: median(launches.map(launch => launch.restoredMs)),
     peppermintMs: median(launches.map(launch => launch.peppermintMs)),
+    paintMs: median(launches.map(launch => launch.paintMs)),
     slowest,
     extensions: extensionList,
     mods: modList,

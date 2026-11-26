@@ -79,12 +79,29 @@ add_task(async function test_this_launch_was_recorded() {
   );
   const launch = (await PeppermintStartupDoctor.launches()).at(-1);
   Assert.greater(launch.firstPaintMs, 0, "Knows when the window appeared");
-  Assert.ok("PeppermintVault" in launch.features, "Times each feature");
+  Assert.ok("PeppermintTabIslands" in launch.features, "Times each feature");
+  Assert.ok(
+    "Popular sites suggestions" in launch.features,
+    "Times the features that start after the first frame too"
+  );
   Assert.ok(
     !("PeppermintStartupDoctor" in launch.features),
     "Leaves its own start out"
   );
-  Assert.greaterOrEqual(launch.peppermintMs, launch.features.PeppermintVault);
+  Assert.greaterOrEqual(
+    launch.peppermintMs,
+    launch.features.PeppermintTabIslands
+  );
+  Assert.greaterOrEqual(
+    launch.paintMs,
+    launch.features.PeppermintTabIslands,
+    "Counts what runs before the first frame"
+  );
+  Assert.lessOrEqual(
+    launch.paintMs,
+    launch.peppermintMs - launch.features["Popular sites suggestions"],
+    "Leaves later phases out of the time before the first frame"
+  );
 
   let ran = false;
   PeppermintStartupDoctor.measure("Later window", () => (ran = true));

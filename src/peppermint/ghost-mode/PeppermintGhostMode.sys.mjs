@@ -31,6 +31,7 @@ const LAST_PRIVATE_CLOSED_TOPIC = "last-pb-context-exited";
  */
 class GhostMode {
   #started = false;
+  #watching = false;
 
   // Files that finished downloading in a ghost window: {path, size}. The size
   // is checked again before deleting, so a file the user replaced is kept.
@@ -57,13 +58,25 @@ class GhostMode {
     Services.obs.addObserver(this, LAST_PRIVATE_CLOSED_TOPIC);
     lazy.AsyncShutdown.profileBeforeChange.addBlocker(
       "PeppermintGhostMode: delete ghost downloads",
-      () => this.deleteDownloads(),
+      () => this.deleteDownloads()
     );
 
-    this.#watchDownloads().catch((error) =>
-      console.error("Ghost Mode: download tracking failed", error),
-    );
+    // Opening the private download list costs a little; only a ghost
+    // window can add to it.
+    if (this.openGhostWindowCount()) {
+      this.#startWatchingDownloads();
+    }
     this.syncButtons();
+  }
+
+  #startWatchingDownloads() {
+    if (this.#watching) {
+      return;
+    }
+    this.#watching = true;
+    this.#watchDownloads().catch(error =>
+      console.error("Ghost Mode: download tracking failed", error)
+    );
   }
 
   observe(subject, topic) {
@@ -71,6 +84,7 @@ class GhostMode {
       case WINDOW_READY_TOPIC:
         this.syncButtons();
         if (this.isGhostWindow(subject)) {
+          this.#startWatchingDownloads();
           this.#maybeShowNotice(subject);
         }
         break;
@@ -78,8 +92,8 @@ class GhostMode {
         this.syncButtons(subject);
         break;
       case LAST_PRIVATE_CLOSED_TOPIC:
-        this.deleteDownloads().catch((error) =>
-          console.error("Ghost Mode: deleting downloads failed", error),
+        this.deleteDownloads().catch(error =>
+          console.error("Ghost Mode: deleting downloads failed", error)
         );
         break;
     }
@@ -158,7 +172,7 @@ class GhostMode {
   async #watchDownloads() {
     this.#list = await lazy.Downloads.getList(lazy.Downloads.PRIVATE);
     await this.#list.addView({
-      onDownloadChanged: (download) => this.#track(download),
+      onDownloadChanged: download => this.#track(download),
     });
   }
 
