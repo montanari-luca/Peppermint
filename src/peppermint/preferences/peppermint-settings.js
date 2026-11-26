@@ -252,6 +252,14 @@ var gZenPerformanceSettings = {
         Services.prefs.setIntPref(archivePref, hours);
       });
     }
+    const neverArchive = document.getElementById("peppermintTabArchiveNever");
+    if (neverArchive) {
+      const neverPref = "peppermint.tab-archive.never";
+      neverArchive.value = Services.prefs.getStringPref(neverPref, "");
+      neverArchive.addEventListener("change", () => {
+        Services.prefs.setStringPref(neverPref, neverArchive.value.trim());
+      });
+    }
     const input = document.getElementById("zenTabUnloaderMinutes");
     if (!input) {
       return;

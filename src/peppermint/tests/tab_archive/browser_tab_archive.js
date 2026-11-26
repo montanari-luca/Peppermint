@@ -7,6 +7,7 @@ const { isArchivable } = ChromeUtils.importESModule(
   "moz-src:///peppermint/common/PeppermintTabs.sys.mjs"
 );
 const {
+  PREF_NEVER,
   archiveIdleTabs,
   archiveTab,
   canArchiveByHand,
@@ -21,14 +22,19 @@ const {
   dueSnoozes,
   getRecord,
   listRecords,
+  flushStore,
   nextWakeTime,
   pickEvictions,
   removeRecord,
+  resetStoreForTests,
 } = ChromeUtils.importESModule(
   "moz-src:///peppermint/tab-archive/PeppermintTabArchiveStore.sys.mjs"
 );
 const { SessionStore } = ChromeUtils.importESModule(
   "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs"
+);
+const { TabStateFlusher } = ChromeUtils.importESModule(
+  "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
 );
 
 const PAGE = "https://example.com/";
@@ -202,4 +208,83 @@ add_task(async function test_private_windows_are_left_alone() {
   } finally {
     await BrowserTestUtils.closeWindow(privateWindow);
   }
+});
+
+add_task(async function test_restore_brings_back_history() {
+  const tab = await BrowserTestUtils.openNewForegroundTab(gBrowser, PAGE);
+  for (const url of [`${PAGE}?second`, `${PAGE}?third`]) {
+    BrowserTestUtils.startLoadingURIString(tab.linkedBrowser, url);
+    await BrowserTestUtils.browserLoaded(tab.linkedBrowser, false, url);
+  }
+  await TabStateFlusher.flush(tab.linkedBrowser);
+  const record = await archiveTab(window, tab);
+  Assert.ok(record?.state, "The archive keeps the tab's session state");
+  Assert.equal(record.state.entries.length, 3, "With its history");
+
+  const restored = await restoreRecord(record.id, window);
+  try {
+    await TestUtils.waitForCondition(
+      () =>
+        restored.linkedBrowser.currentURI?.spec == `${PAGE}?third` &&
+        !restored.hasAttribute("busy"),
+      "The restored tab shows the page it was on"
+    );
+    const state = JSON.parse(SessionStore.getTabState(restored));
+    Assert.equal(state.entries.length, 3, "The back history came back");
+    Assert.equal(state.index, 3, "On the same page");
+    Assert.ok(!restored.pinned, "As a plain tab");
+    Assert.equal(
+      restored.getAttribute("zen-workspace-id"),
+      record.workspaceId,
+      "In its Space"
+    );
+  } finally {
+    BrowserTestUtils.removeTab(restored);
+  }
+});
+
+add_task(async function test_never_archive_list() {
+  await SpecialPowers.pushPrefEnv({ set: [[PREF_NEVER, "example.com"]] });
+  const tab = await openBackgroundTab(`${PAGE}?never`);
+  tab._lastAccessed = Date.now() - 100 * HOUR;
+  const restore = protectOtherTabs(tab);
+  try {
+    Assert.equal(await archiveIdleTabs(1), 0, "A listed site is not archived");
+    Assert.ok(!tab.closing, "Its tab stays open");
+    const record = await archiveTab(window, tab);
+    Assert.ok(record, "It can still be archived by hand");
+    await removeRecord(record.id);
+  } finally {
+    restore();
+    if (!tab.closing && tab.parentNode) {
+      BrowserTestUtils.removeTab(tab);
+    }
+    await SpecialPowers.popPrefEnv();
+  }
+});
+
+add_task(async function test_old_archive_file_is_moved() {
+  await flushStore();
+  const oldPath = PathUtils.join(PathUtils.profileDir, "tab-archive.json");
+  const newPath = PathUtils.join(PathUtils.profileDir, "tab-archive.jsonlz4");
+  await IOUtils.remove(newPath, { ignoreAbsent: true });
+  await IOUtils.writeJSON(oldPath, {
+    version: 1,
+    records: [
+      {
+        id: "old-record",
+        kind: "archive",
+        url: PAGE,
+        title: "Old",
+        archivedAt: 1,
+      },
+    ],
+  });
+  resetStoreForTests();
+  Assert.ok(await getRecord("old-record"), "Records of the old file are read");
+  await flushStore();
+  Assert.ok(await IOUtils.exists(newPath), "They are written to the new file");
+  Assert.ok(!(await IOUtils.exists(oldPath)), "The old file is removed");
+  await removeRecord("old-record");
+  await flushStore();
 });

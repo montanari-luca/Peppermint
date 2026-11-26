@@ -7,3 +7,9 @@
 # archived. 0 turns the automatic archive off.
 - name: peppermint.tab-archive.hours
   value: 72
+
+# Sites whose tabs the idle archive leaves alone: host names separated by
+# spaces, commas or new lines. A host also covers its subdomains. Archiving a
+# tab by hand still works.
+- name: peppermint.tab-archive.never
+  value: ""

@@ -12,6 +12,8 @@
 
 import {
   isArchivable,
+  isTabHostListed,
+  parseHostList,
   tabUrl,
 } from "moz-src:///peppermint/common/PeppermintTabs.sys.mjs";
 import {
@@ -28,11 +30,33 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   PeppermintActivity: "moz-src:///peppermint/common/PeppermintActivity.sys.mjs",
+  SessionStore:
+    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
 });
 
 export const PREF_HOURS = "peppermint.tab-archive.hours";
+// Sites the idle sweep leaves alone; archiving by hand still works.
+export const PREF_NEVER = "peppermint.tab-archive.never";
+// An archived tab keeps this much of its history around the current page.
+const MAX_HISTORY = 10;
+const MAX_STATE_CHARS = 64 * 1024;
+// What only an open tab in its old place means; restored, the tab is a
+// plain tab in the Space it goes back to.
+const PLACE_FIELDS = [
+  "zenEssential",
+  "zenIsEmpty",
+  "zenSyncId",
+  "zenIsGlance",
+  "zenGlanceId",
+  "zenLiveFolderItemId",
+  "zenPinnedIcon",
+  "_zenPinnedInitialState",
+  "_zenIsActiveTab",
+  "groupId",
+  "hidden",
+];
 const DEFAULT_HOURS = 72;
 const HOUR_MS = 60 * 60 * 1000;
 const FIRST_SWEEP_DELAY_MS = 2 * 60 * 1000;
@@ -88,6 +112,37 @@ export function snoozeTime(now, preset) {
   return date.getTime();
 }
 
+function neverArchiveList() {
+  return parseHostList(Services.prefs.getStringPref(PREF_NEVER, ""));
+}
+
+/**
+ * @param {MozTabbrowserTab} tab
+ * @param {string[]} [list] - The parsed list, when checking many tabs
+ * @returns {boolean} The tab's site is on the never-archive list
+ */
+export function isNeverArchived(tab, list = neverArchiveList()) {
+  return isTabHostListed(list, tab);
+}
+
+/**
+ * Put a site on the never-archive list, or take it off.
+ *
+ * @param {string} host
+ * @param {boolean} never
+ */
+export function setNeverArchived(host, never) {
+  const name = String(host || "").toLowerCase();
+  if (!name) {
+    return;
+  }
+  const list = neverArchiveList().filter(entry => entry !== name);
+  if (never) {
+    list.push(name);
+  }
+  Services.prefs.setStringPref(PREF_NEVER, list.join("\n"));
+}
+
 function archiveHours() {
   return Services.prefs.getIntPref(PREF_HOURS, DEFAULT_HOURS);
 }
@@ -117,8 +172,54 @@ export function canArchiveByHand(win, tab) {
   return !isPrivate(win) && isArchivable(tab, null);
 }
 
+/**
+ * @param {object} state - A tab's session state
+ * @returns {number} Its size as stored
+ */
+function stateSize(state) {
+  return JSON.stringify(state).length;
+}
+
+/**
+ * @param {MozTabbrowserTab} tab
+ * @returns {object|null} The tab's session state trimmed for the archive:
+ *   history around the current page, and no form data when it is large.
+ *   Null when there is none worth keeping.
+ */
+export function archivedState(tab) {
+  let state;
+  try {
+    state = JSON.parse(lazy.SessionStore.getTabState(tab));
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(state?.entries) || !state.entries.length) {
+    return null;
+  }
+  const index = Math.min(
+    Math.max(1, state.index || state.entries.length),
+    state.entries.length
+  );
+  const start = Math.max(0, index - MAX_HISTORY);
+  state.entries = state.entries.slice(start, start + MAX_HISTORY);
+  state.index = index - start;
+  if (stateSize(state) > MAX_STATE_CHARS) {
+    delete state.formdata;
+    for (const entry of state.entries) {
+      delete entry.formdata;
+    }
+  }
+  if (stateSize(state) > MAX_STATE_CHARS) {
+    state.entries = [state.entries[state.index - 1]];
+    state.index = 1;
+  }
+  return stateSize(state) > MAX_STATE_CHARS ? null : state;
+}
+
 async function closeIntoStore(win, tab, extra) {
+  const state = archivedState(tab);
   const record = await addRecord({
+    ...(state ? { state } : {}),
     url: tabUrl(tab),
     title: tab.label || tabUrl(tab),
     ...workspaceOf(win, tab),
@@ -174,12 +275,18 @@ export function idleCandidates(hours = archiveHours()) {
     return [];
   }
   const cutoff = Date.now() - hours * HOUR_MS;
+  const never = neverArchiveList();
   const found = [];
   for (const win of browserWindows()) {
     const selected = win.gBrowser.selectedTab;
     for (const tab of win.gBrowser.tabs) {
       const last = tab.lastAccessed || 0;
-      if (last && last <= cutoff && isArchivable(tab, selected)) {
+      if (
+        last &&
+        last <= cutoff &&
+        isArchivable(tab, selected) &&
+        !isNeverArchived(tab, never)
+      ) {
         found.push({ win, tab });
       }
     }
@@ -232,12 +339,28 @@ export async function restoreRecord(id, preferred, { select = true } = {}) {
   } catch {
     workspaceId = undefined;
   }
-  const tab = win.gBrowser.addTab(record.url, {
+  const options = {
     triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
     userContextId: record.userContextId || 0,
     zenWorkspaceId: workspaceId,
     inBackground: !select,
-  });
+  };
+  let tab;
+  if (record.state) {
+    const state = { ...record.state, pinned: false };
+    for (const field of PLACE_FIELDS) {
+      delete state[field];
+    }
+    if (workspaceId) {
+      state.zenWorkspace = workspaceId;
+    } else {
+      delete state.zenWorkspace;
+    }
+    tab = win.gBrowser.addTab("about:blank", options);
+    lazy.SessionStore.setTabState(tab, JSON.stringify(state));
+  } else {
+    tab = win.gBrowser.addTab(record.url, options);
+  }
   if (select) {
     win.gBrowser.selectedTab = tab;
   }
@@ -334,4 +457,61 @@ export function initTabArchive() {
     armSweep(FIRST_SWEEP_DELAY_MS);
   }
   wakeDueTabs().catch(error => console.error("Snooze failed", error));
+}
+
+const MENU_ITEM_ID = "context_peppermintNeverArchive";
+
+function contextHost(tab) {
+  if (!tab || !/^https?:/.test(tabUrl(tab))) {
+    return "";
+  }
+  try {
+    return tab.linkedBrowser.currentURI.host.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Adds "Never archive this site" to the tab context menu of a window.
+ *
+ * @param {Window} win
+ */
+export function initArchiveMenu(win) {
+  const menu = win.document.getElementById("tabContextMenu");
+  if (!menu || isPrivate(win) || menu.querySelector(`#${MENU_ITEM_ID}`)) {
+    return;
+  }
+  win.MozXULElement.insertFTLIfNeeded("browser/peppermint-tab-archive.ftl");
+  const item = win.document.createXULElement("menuitem");
+  item.id = MENU_ITEM_ID;
+  item.setAttribute("type", "checkbox");
+  item.setAttribute("data-l10n-id", "peppermint-tab-archive-never-site");
+  item.hidden = true;
+  item.addEventListener("command", () => {
+    const host = item.dataset.host;
+    setNeverArchived(host, item.hasAttribute("checked"));
+  });
+  menu.addEventListener("popupshowing", event => {
+    if (event.target !== menu) {
+      return;
+    }
+    const host =
+      archiveHours() > 0 ? contextHost(win.TabContextMenu?.contextTab) : "";
+    item.hidden = !host;
+    if (!host) {
+      return;
+    }
+    item.dataset.host = host;
+    item.toggleAttribute(
+      "checked",
+      isNeverArchived(win.TabContextMenu.contextTab)
+    );
+  });
+  const anchor = menu.querySelector("#context_closeTab");
+  if (anchor) {
+    anchor.before(item);
+  } else {
+    menu.appendChild(item);
+  }
 }

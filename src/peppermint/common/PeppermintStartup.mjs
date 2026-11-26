@@ -247,6 +247,14 @@ const FEATURES = [
       ).PeppermintVault.init(win),
   },
   {
+    name: "Tab archive menu",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/tab-archive/PeppermintTabArchive.sys.mjs"
+      ).initArchiveMenu(win),
+  },
+  {
     name: "PeppermintSitePrivacy",
     phase: DELAYED,
     run: win =>

@@ -4,16 +4,19 @@
 
 /**
  * Tabs that were archived or snoozed. They live in
- * `<profile>/tab-archive.json`: a record keeps what is needed to open the page
- * again in its Space, nothing of the page itself.
+ * `<profile>/tab-archive.jsonlz4`: a record keeps what is needed to open the
+ * page again in its Space, with its history, scroll position and form data.
  *
  * A record is `{ id, kind, url, title, workspaceId, workspaceName,
- * userContextId, lastAccessed, archivedAt, wakeAt }`. `kind` is "archive" for
- * a tab that sat idle or was archived by hand, and "snooze" for a tab that
- * comes back at `wakeAt`.
+ * userContextId, lastAccessed, archivedAt, wakeAt, state }`. `kind` is
+ * "archive" for a tab that sat idle or was archived by hand, and "snooze" for
+ * a tab that comes back at `wakeAt`. `state` is the tab's session state;
+ * records from before it existed only have the URL.
  */
 
-const FILE_NAME = "tab-archive.json";
+const FILE_NAME = "tab-archive.jsonlz4";
+// Where the archive was kept before it held session state.
+const OLD_FILE_NAME = "tab-archive.json";
 const FILE_VERSION = 1;
 const MAX_ARCHIVED = 1000;
 // Changes close together (an idle sweep archives many tabs) share one write.
@@ -34,9 +37,25 @@ let writeTask = null;
 // Writes to disk run one after another too.
 let diskWrite = Promise.resolve();
 let blockerAdded = false;
+// The old file is removed once the new one is written.
+let migrating = false;
 
 function filePath() {
   return PathUtils.join(PathUtils.profileDir, FILE_NAME);
+}
+
+function oldFilePath() {
+  return PathUtils.join(PathUtils.profileDir, OLD_FILE_NAME);
+}
+
+async function readRecords(path, options) {
+  const data = await IOUtils.readJSON(path, options);
+  if (data?.version === FILE_VERSION && Array.isArray(data.records)) {
+    return new Map(
+      data.records.filter(isValidRecord).map(record => [record.id, record])
+    );
+  }
+  return null;
 }
 
 /**
@@ -65,15 +84,25 @@ function isValidRecord(record) {
 function load() {
   recordsPromise ??= (async () => {
     try {
-      const data = await IOUtils.readJSON(filePath());
-      if (data?.version === FILE_VERSION && Array.isArray(data.records)) {
-        return new Map(
-          data.records.filter(isValidRecord).map(record => [record.id, record])
-        );
+      const records = await readRecords(filePath(), { decompress: true });
+      if (records) {
+        return records;
       }
     } catch (error) {
       if (error?.name !== "NotFoundError") {
         console.error("The tab archive could not be read", error);
+      }
+    }
+    try {
+      const records = await readRecords(oldFilePath());
+      if (records) {
+        migrating = true;
+        scheduleWrite();
+        return records;
+      }
+    } catch (error) {
+      if (error?.name !== "NotFoundError") {
+        console.error("The old tab archive could not be read", error);
       }
     }
     return new Map();
@@ -93,8 +122,12 @@ function writeNow() {
     await IOUtils.writeJSON(
       filePath(),
       { version: FILE_VERSION, records: [...records.values()] },
-      { tmpPath: `${filePath()}.tmp` }
+      { tmpPath: `${filePath()}.tmp`, compress: true }
     );
+    if (migrating) {
+      migrating = false;
+      await IOUtils.remove(oldFilePath(), { ignoreAbsent: true });
+    }
   });
   diskWrite = run.catch(() => {});
   return run;
@@ -235,4 +268,5 @@ export function resetStoreForTests() {
   writeTask?.disarm();
   writeTask = null;
   diskWrite = Promise.resolve();
+  migrating = false;
 }

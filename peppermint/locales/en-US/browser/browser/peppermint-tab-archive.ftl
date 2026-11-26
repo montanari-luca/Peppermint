@@ -56,3 +56,6 @@ peppermint-archive-empty-off-description = Tabs are not archived automatically. 
 peppermint-archive-no-results = No archived tabs match your search.
 peppermint-archive-private = The tab archive is not available in private windows.
 peppermint-archive-restore-error = That tab could not be restored.
+
+peppermint-tab-archive-never-site =
+    .label = Never archive this site

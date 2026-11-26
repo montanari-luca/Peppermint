@@ -317,7 +317,11 @@ zen-tab-unloader-minutes-description = Minutes. Pinned tabs, essentials, the tab
 
 peppermint-tab-archive-hours-label = Archive idle tabs after
 
-peppermint-tab-archive-hours-description = Hours. Archived tabs can be opened again from the tab archive. Pinned tabs, essentials, folders, split views and tabs playing sound are never archived. 0 turns it off.
+peppermint-tab-archive-hours-description = Hours. Archived tabs open again from the tab archive with their history, scroll position and form data. Pinned tabs, essentials, folders, split views and tabs playing sound are never archived. 0 turns it off.
+
+peppermint-tab-archive-never-label = Never archive these sites
+
+peppermint-tab-archive-never-description = One site per line, for example mail.example.com. Tabs on these sites, and their subdomains, are not archived when idle; you can still archive them by hand.
 
 zen-underpowered-auto-header = Underpowered Mode
 
