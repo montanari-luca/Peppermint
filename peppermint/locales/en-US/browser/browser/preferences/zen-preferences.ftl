@@ -340,9 +340,9 @@ zen-underpowered-resource-threshold-label = CPU or memory load counts as heavy a
 
 zen-underpowered-grace-label = Freeze a background tab after (seconds)
 
-zen-underpowered-never-freeze-label = Never freeze these sites
+zen-underpowered-never-freeze-label = Never unload or freeze these sites
 
-zen-underpowered-never-freeze-description = One site per line, for example mail.example.com. Tabs on these sites, and their subdomains, keep running in Underpowered Mode.
+zen-underpowered-never-freeze-description = One site per line, for example mail.example.com. Tabs on these sites, and their subdomains, are never unloaded when idle and keep running in Underpowered Mode.
 
 zen-underpowered-status-off = Underpowered Mode is off.
 

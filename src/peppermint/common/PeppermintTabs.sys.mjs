@@ -104,3 +104,77 @@ export function isArchivable(tab, selected) {
   }
   return /^https?:/.test(tabUrl(tab));
 }
+
+/**
+ * @param {string} raw - Host names separated by spaces, commas, semicolons
+ *   or new lines
+ * @returns {string[]} Lower-case hosts without a leading "*." or "."
+ */
+export function parseHostList(raw) {
+  return String(raw || "")
+    .split(/[\s,;]+/)
+    .map(entry =>
+      entry
+        .trim()
+        .toLowerCase()
+        .replace(/^\*?\./, "")
+    )
+    .filter(Boolean);
+}
+
+/**
+ * @param {string[]} hosts - From `parseHostList`
+ * @param {MozTabbrowserTab} tab
+ * @returns {boolean} The tab's site, or a domain it belongs to, is listed
+ */
+export function isTabHostListed(hosts, tab) {
+  if (!hosts.length) {
+    return false;
+  }
+  let host;
+  try {
+    host = tab.linkedBrowser.currentURI.host.toLowerCase();
+  } catch {
+    // Pages without a host (about:, file:) have no entry to match.
+    return false;
+  }
+  return hosts.some(entry => host === entry || host.endsWith("." + entry));
+}
+
+/**
+ * @param {MozTabbrowserTab} tab
+ * @returns {boolean} The tab makes sound, shares a camera, microphone or
+ *   screen, or backs a Glance overlay, so it has to keep running
+ */
+export function isTabWorkingInBackground(tab) {
+  return (
+    tab.soundPlaying ||
+    tab.hasAttribute("soundplaying") ||
+    tab.hasAttribute("sharing") ||
+    tab.hasAttribute("zen-glance-tab") ||
+    tab.hasAttribute("glance-id")
+  );
+}
+
+/**
+ * Unloads a tab without forcing it: a beforeunload handler or an open dialog
+ * keeps it loaded. Session state is flushed first, so the tab comes back as
+ * it was.
+ *
+ * @param {Window} win
+ * @param {MozTabbrowserTab} tab
+ * @param {() => boolean} stillWanted - Asked again once the state is flushed,
+ *   since the tab may have been selected or started playing meanwhile
+ * @param {object} [options] - Passed to `gBrowser.discardBrowser`
+ * @returns {Promise<boolean>} Whether the tab was unloaded
+ */
+export async function discardTab(win, tab, stillWanted, options = {}) {
+  await win.gBrowser.prepareDiscardBrowser(tab);
+  if (win.closed || tab.closing || !stillWanted()) {
+    return false;
+  }
+  return !!win.gBrowser.discardBrowser(tab, {
+    ...options,
+    forceDiscard: false,
+  });
+}

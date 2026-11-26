@@ -2,7 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { isUnloadSafe } from "moz-src:///peppermint/common/PeppermintTabs.sys.mjs";
+import {
+  discardTab,
+  isTabHostListed,
+  isTabWorkingInBackground,
+  isUnloadSafe,
+  parseHostList,
+} from "moz-src:///peppermint/common/PeppermintTabs.sys.mjs";
 import { ResourceMonitor } from "moz-src:///peppermint/underpowered/ZenUnderpoweredResources.sys.mjs";
 
 const lazy = {};
@@ -264,7 +270,11 @@ class ZenUnderpoweredImpl {
       this.#applyLimits();
       this.#watchLimits(true);
       if (!startup) {
-        Services.obs.notifyObservers(null, MEMORY_PRESSURE_TOPIC, "heap-minimize");
+        Services.obs.notifyObservers(
+          null,
+          MEMORY_PRESSURE_TOPIC,
+          "heap-minimize"
+        );
       }
     } else {
       this.#watchLimits(false);
@@ -305,14 +315,11 @@ class ZenUnderpoweredImpl {
         : "zen-underpowered-resources-toast-description";
     }
     const win = Services.wm.getMostRecentBrowserWindow();
-    win?.gZenUIManager?.showToast(
-      enabled ? TOAST_ID : TOAST_OFF_ID,
-      {
-        descriptionId,
-        timeout: TOAST_TIMEOUT_MS,
-        frosted: true,
-      }
-    );
+    win?.gZenUIManager?.showToast(enabled ? TOAST_ID : TOAST_OFF_ID, {
+      descriptionId,
+      timeout: TOAST_TIMEOUT_MS,
+      frosted: true,
+    });
   }
 
   *#browserWindows() {
@@ -664,21 +671,8 @@ class ZenUnderpoweredImpl {
   // Freezing
 
   #readNeverFreeze() {
-    const raw = Services.prefs.getStringPref(PREF_NEVER_FREEZE, "");
-    this.#neverFreeze = raw
-      .split(/[\s,;]+/)
-      .map(entry => entry.trim().toLowerCase().replace(/^\*?\./, ""))
-      .filter(Boolean);
-  }
-
-  /**
-   * @param {string} host
-   * @returns {boolean} Whether the host is on the never-freeze list
-   */
-  #isNeverFrozen(host) {
-    const name = host.toLowerCase();
-    return this.#neverFreeze.some(
-      entry => name === entry || name.endsWith("." + entry)
+    this.#neverFreeze = parseHostList(
+      Services.prefs.getStringPref(PREF_NEVER_FREEZE, "")
     );
   }
 
@@ -752,31 +746,14 @@ class ZenUnderpoweredImpl {
    * @returns {boolean} Whether the tab is live, off screen, silent, and safe to unload
    */
   #canFreeze(tab, selected) {
-    if (!isUnloadSafe(tab, selected)) {
-      return false;
-    }
     // Pinned tabs may freeze (they reload on click), but a tab that is making
     // sound, sharing a camera, microphone or screen, or backing a glance
     // overlay must keep running.
-    if (
-      tab.soundPlaying ||
-      tab.hasAttribute("soundplaying") ||
-      tab.hasAttribute("sharing") ||
-      tab.hasAttribute("zen-glance-tab") ||
-      tab.hasAttribute("glance-id")
-    ) {
-      return false;
-    }
-    if (this.#neverFreeze.length) {
-      try {
-        if (this.#isNeverFrozen(tab.linkedBrowser.currentURI.host)) {
-          return false;
-        }
-      } catch {
-        // Pages without a host (about:, file:) have no entry to match.
-      }
-    }
-    return true;
+    return (
+      isUnloadSafe(tab, selected) &&
+      !isTabWorkingInBackground(tab) &&
+      !isTabHostListed(this.#neverFreeze, tab)
+    );
   }
 
   async #freezeTab(win, tab) {
@@ -785,15 +762,15 @@ class ZenUnderpoweredImpl {
     }
     this.#freezing.add(tab);
     try {
-      // Session state has to be current before the browser goes away.
-      await win.gBrowser.prepareDiscardBrowser(tab);
-      if (
-        this.#windows.has(win) &&
-        this.#canFreeze(tab, win.gBrowser.selectedTab) &&
-        this.#graceRemaining(tab) === 0 &&
-        // Not forced: a beforeunload handler or open dialog keeps the tab.
-        win.gBrowser.discardBrowser(tab)
-      ) {
+      const frozen = await discardTab(
+        win,
+        tab,
+        () =>
+          this.#windows.has(win) &&
+          this.#canFreeze(tab, win.gBrowser.selectedTab) &&
+          this.#graceRemaining(tab) === 0
+      );
+      if (frozen) {
         this.#frozen.add(tab);
       }
     } catch (error) {
