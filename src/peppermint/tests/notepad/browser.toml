@@ -3,6 +3,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 [DEFAULT]
+support-files = [
+  "head.js",
+]
 prefs = [
   "zen.notepad.autocomplete-key=Tab",
   "zen.notepad.auto-lock-minutes=0",
