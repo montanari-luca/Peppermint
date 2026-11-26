@@ -1,6 +1,14 @@
 --- a/zen/sessionstore/ZenSessionManager.sys.mjs
 +++ b/zen/sessionstore/ZenSessionManager.sys.mjs
-@@ -98,6 +98,8 @@
+@@ -47,6 +47,7 @@
+   true
+ );
+ const FILE_NAME = "zen-sessions.jsonlz4";
++const VOLATILE_SIDEBAR_KEYS = new Set(["lastCollected", "lastAccessed"]);
+ 
+ const LAST_BUILD_ID_PREF = "zen.session-store.last-build-id";
+ 
+@@ -98,6 +99,8 @@
     * A deferred task to create backups of the session file.
     */
    #deferredBackupTask = null;
@@ -9,7 +17,7 @@
  
    init() {
      this.log("Initializing session manager");
-@@ -608,12 +610,15 @@
+@@ -608,12 +611,15 @@
        // browsing mode. We also don't want to save if there are no windows.
        return;
      }
@@ -28,17 +36,18 @@
          }
        );
      }
-@@ -621,8 +626,16 @@
+@@ -621,8 +627,17 @@
      // Let interested consumers (e.g. Firefox Sync) know fresh sidebar data
      // is available, without this module knowing anything about them.
      Services.obs.notifyObservers(null, "zen-sidebar-data-collected");
 -    // This would save the data to disk asynchronously or when quitting the app.
      let sidebar = this.#sidebarWithoutCloning;
-+    // Only an identical sidebar skips the write, so no change is lost.
-+    // lastCollected changes on every collection, so it is left out.
-+    const content = { ...sidebar };
-+    delete content.lastCollected;
-+    const serialized = JSON.stringify(content);
++    // Only an identical sidebar skips the write, so no change is lost. The
++    // collection time, and the selected tab's last access (always "now"),
++    // change on every save, so they are left out of the comparison.
++    const serialized = JSON.stringify(sidebar, (key, value) =>
++      VOLATILE_SIDEBAR_KEYS.has(key) ? undefined : value
++    );
 +    if (serialized === this.#lastSidebarSerialized) {
 +      return;
 +    }
@@ -46,7 +55,7 @@
      this.#file.data = sidebar;
      if (soon) {
        this.#file.saveSoon();
-@@ -631,6 +644,7 @@
+@@ -631,6 +646,7 @@
      }
      lazy.ZenLiveFoldersManager.saveState(soon);
      this.#debounceRegeneration();
