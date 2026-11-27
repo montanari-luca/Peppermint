@@ -19,7 +19,10 @@ Releases are built, tested, signed and published by `.github/workflows/peppermin
 4. **Optional signing** (environment `signing`). Each part turns on by itself once its secrets exist:
    - macOS Developer ID: `MACOS_CERT_P12_BASE64`, `MACOS_CERT_PASSWORD`, `MACOS_PROVISIONING_PROFILE_BASE64` (for passkeys). Notarization: `MACOS_NOTARY_KEY_P8_BASE64`, `MACOS_NOTARY_KEY_ID`, `MACOS_NOTARY_ISSUER_ID` (an App Store Connect API key).
    - Windows (Azure Trusted Signing): secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` (federated with this repository), and variables `AZURE_SIGNING_ENDPOINT` (for example `weu.codesigning.azure.net`), `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE`. Only the installers are signed.
-5. **Optional variables**: `PEPPERMINT_RUNNER` (a larger Linux runner, when builds near the 6-hour limit) and `PEPPERMINT_MAC_RUNNER` (default `macos-26`).
+5. **Repository variables** (Settings, Secrets and variables, Variables):
+   - `PEPPERMINT_NIGHTLY_TESTS` = `true` turns on the nightly test run. Set it once a run by hand (Actions, Peppermint tests) has passed.
+   - `PEPPERMINT_TESTS_BLOCK_RELEASE` = `true` makes failing tests stop a release. Until then they only add a warning; set it after a couple of weeks of green nightly runs.
+   - Optional: `PEPPERMINT_RUNNER` (a larger Linux runner, when builds near the 6-hour limit) and `PEPPERMINT_MAC_RUNNER` (default `macos-26`).
 
 ## Cutting a release
 

@@ -154,8 +154,15 @@ jobs:
       actions: read
     uses: ./.github/workflows/peppermint-tests.yml
 
+  # Failing tests block the release once the repository variable
+  # PEPPERMINT_TESTS_BLOCK_RELEASE is "true"; until then they only warn.
   draft:
     needs: [prepare, windows, linux, macos, tests]
+    if: >-
+      !cancelled() && needs.prepare.result == 'success' &&
+      needs.windows.result == 'success' && needs.linux.result == 'success' &&
+      needs.macos.result == 'success' &&
+      (needs.tests.result == 'success' || vars.PEPPERMINT_TESTS_BLOCK_RELEASE != 'true')
     runs-on: ubuntu-latest
     environment: signing
     permissions:
@@ -172,7 +179,12 @@ jobs:
       HAS_AZURE_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' }}
       HAS_APPLE_CERT: ${{ secrets.MACOS_CERT_P12_BASE64 != '' }}
       HAS_APPLE_NOTARY: ${{ secrets.MACOS_NOTARY_KEY_P8_BASE64 != '' }}
+      TESTS_RESULT: ${{ needs.tests.result }}
     steps:
+      - name: Warn about failing tests
+        if: env.TESTS_RESULT != 'success'
+        run: echo "::warning::The browser tests did not pass ($TESTS_RESULT); check them before publishing."
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -287,7 +299,9 @@ jobs:
 
   publish:
     needs: [prepare, draft]
-    if: needs.prepare.outputs.dry_run != 'true'
+    if: >-
+      !cancelled() && needs.draft.result == 'success' &&
+      needs.prepare.outputs.dry_run != 'true'
     runs-on: ubuntu-latest
     # Holds PEPPERMINT_UPDATE_SIGNING_KEY and RELEASES_DEPLOY_KEY. Give it a
     # required reviewer: the run waits here until the draft is approved.

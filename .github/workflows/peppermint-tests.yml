@@ -4,7 +4,8 @@
 #
 # Runs nightly on `mine` (skipped when that commit already passed), on demand,
 # from the release workflow, and on pull requests from an upstream sync or
-# labeled "full-tests".
+# labeled "full-tests". The nightly run starts once the repository variable
+# PEPPERMINT_NIGHTLY_TESTS is "true" (after a first green run by hand).
 name: Peppermint tests
 
 permissions:
@@ -58,6 +59,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
+          NIGHTLY: ${{ vars.PEPPERMINT_NIGHTLY_TESTS }}
           HEAD_REF: ${{ github.head_ref }}
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           REPO: ${{ github.repository }}
@@ -71,6 +73,11 @@ jobs:
               fi
               ;;
             schedule)
+              if [[ "$NIGHTLY" != true ]]; then
+                echo "Nightly tests are off until the PEPPERMINT_NIGHTLY_TESTS variable is true"
+                echo "run=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
               last="$(gh api "repos/$REPO/actions/workflows/peppermint-tests.yml/runs?branch=mine&event=schedule&status=success&per_page=1" \
                 --jq '.workflow_runs[0].head_sha // ""' || true)"
               if [[ "$last" == "$SHA" ]]; then
