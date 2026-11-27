@@ -1,0 +1,360 @@
+# Builds, tests and publishes a Peppermint release (see peppermint/RELEASING.md).
+#
+#   1. prepare  the version comes from peppermint/identity.json; the commit must
+#               be on mine and the version newer than the published one
+#   2. builds   Windows, Linux and macOS, and the browser tests, in parallel
+#   3. draft    versioned files, SHA256SUMS.txt, build provenance and notes in
+#               a draft GitHub release (a dry run stops here)
+#   4. publish  waits for approval (the "release" environment), publishes the
+#               release, writes and signs peppermint.json and pushes it where
+#               the browser's updater reads it, then checks what is live
+#
+# Run it from the Actions tab (dry run by default), or push a BETA-<version>
+# or v<version> tag.
+name: Peppermint release
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        required: true
+        type: choice
+        default: Beta
+        options:
+          - Beta
+          - Stable
+      dry_run:
+        description: Build and draft the release, publish nothing
+        required: false
+        type: boolean
+        default: true
+      include_arm64:
+        description: Also build Windows on ARM64
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "BETA-*"
+      - "v*"
+
+concurrency:
+  group: peppermint-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      channel: ${{ steps.plan.outputs.channel }}
+      dry_run: ${{ steps.plan.outputs.dry_run }}
+      previous_tag: ${{ steps.plan.outputs.previous_tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Work out the release
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          manifest=peppermint/scripts/write-update-manifest.mjs
+
+          version="$(node -p "require('./peppermint/identity.json').displayVersion")"
+          surfer="$(node -p "require('./surfer.json').brands.release.release.displayVersion")"
+          [[ "$version" == "$surfer" ]] || fail "identity.json has $version but surfer.json has $surfer; run scripts/version/version.sh"
+
+          if [[ "$EVENT" == push ]]; then
+            dry_run=false
+            if [[ "$REF_NAME" == BETA-* ]]; then channel=Beta; else channel=Stable; fi
+          else
+            channel="$INPUT_CHANNEL"
+            dry_run="$INPUT_DRY_RUN"
+          fi
+          tag="$(node "$manifest" tag "$version" "$channel")"
+          if [[ "$EVENT" == push && "$REF_NAME" != "$tag" ]]; then
+            fail "tag $REF_NAME does not match version $version (expected $tag)"
+          fi
+
+          git fetch --no-tags origin mine
+          git merge-base --is-ancestor "$SHA" origin/mine || fail "$SHA is not on mine"
+
+          if published="$(gh api "repos/$REPO/releases/tags/$tag" --jq '.draft' 2>/dev/null)" && [[ "$published" == false ]]; then
+            fail "$tag is already published"
+          fi
+
+          url="$(node "$manifest" location | sed -n 's/^url=//p')"
+          latest="$(curl -fsSL "$url" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).latest))')"
+          node "$manifest" newer "$version" "$latest" || fail "$version is not newer than the published $latest; bump it with scripts/version/version.sh"
+
+          keys="$(node peppermint/scripts/sign-update-manifest.mjs trusted-keys | wc -l)"
+          if [[ "$keys" == 0 && "$dry_run" != true ]]; then
+            fail "src/peppermint/updater/PeppermintUpdateKeys.sys.mjs has no key: this release could never update itself (see peppermint/RELEASING.md)"
+          fi
+
+          previous_tag="$(gh api "repos/$REPO/releases?per_page=30" --jq '[.[] | select(.draft | not)][0].tag_name // ""')"
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "channel=$channel"
+            echo "dry_run=$dry_run"
+            echo "previous_tag=$previous_tag"
+          } >> "$GITHUB_OUTPUT"
+          echo "### Peppermint $version ($channel), tag $tag, dry run: $dry_run" >> "$GITHUB_STEP_SUMMARY"
+
+  windows:
+    needs: prepare
+    uses: ./.github/workflows/windows-build.yml
+    with:
+      brand: release
+      include_arm64: ${{ inputs.include_arm64 == true }}
+      use_sccache: true
+    secrets: inherit
+
+  linux:
+    needs: prepare
+    uses: ./.github/workflows/peppermint-linux-build.yml
+    with:
+      brand: release
+      arch: x86_64
+    secrets: inherit
+
+  macos:
+    needs: prepare
+    uses: ./.github/workflows/peppermint-macos-build.yml
+    with:
+      brand: release
+    secrets: inherit
+
+  tests:
+    needs: prepare
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/peppermint-tests.yml
+
+  draft:
+    needs: [prepare, windows, linux, macos, tests]
+    runs-on: ubuntu-latest
+    environment: signing
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    outputs:
+      release_id: ${{ steps.draft.outputs.release_id }}
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      CHANNEL: ${{ needs.prepare.outputs.channel }}
+      REPO: ${{ github.repository }}
+      HAS_AZURE_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' }}
+      HAS_APPLE_CERT: ${{ secrets.MACOS_CERT_P12_BASE64 != '' }}
+      HAS_APPLE_NOTARY: ${{ secrets.MACOS_NOTARY_KEY_P8_BASE64 != '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Download the builds
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect the release files
+        run: |
+          set -euo pipefail
+          mkdir release
+          take() {
+            test -f "artifacts/$1/$1" || { echo "::error::missing build $1"; exit 1; }
+            cp "artifacts/$1/$1" "release/Peppermint-$VERSION-$2"
+          }
+          take peppermint.macos-universal.dmg macos-universal.dmg
+          take Peppermint-Setup.exe windows-x64-setup.exe
+          cp artifacts/peppermint.win-x86_64/peppermint.win-x86_64.zip "release/Peppermint-$VERSION-windows-x64-portable.zip"
+          if test -d artifacts/Peppermint-Setup-arm64.exe; then
+            take Peppermint-Setup-arm64.exe windows-arm64-setup.exe
+            cp artifacts/peppermint.win-arm64/peppermint.win-arm64.zip "release/Peppermint-$VERSION-windows-arm64-portable.zip"
+          fi
+          take peppermint.linux-x86_64.tar.xz linux-x86_64.tar.xz
+          ls -l release
+
+      # Optional: Azure Trusted Signing (secrets AZURE_CLIENT_ID,
+      # AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID; variables
+      # AZURE_SIGNING_ENDPOINT such as weu.codesigning.azure.net,
+      # AZURE_SIGNING_ACCOUNT, AZURE_SIGNING_PROFILE).
+      - name: Log in to Azure
+        if: env.HAS_AZURE_SIGNING == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign the Windows installers
+        if: env.HAS_AZURE_SIGNING == 'true'
+        env:
+          ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -o jsign.jar https://repo1.maven.org/maven2/net/jsign/jsign/7.4/jsign-7.4.jar
+          echo "2abf2ade9ea322acc2d60c24794eadc465ff9380938fca4c932d09e0b25f1c28  jsign.jar" | sha256sum -c
+          token="$(az account get-access-token --resource https://codesigning.azure.net --query accessToken -o tsv)"
+          for exe in release/*-setup.exe; do
+            java -jar jsign.jar --storetype TRUSTEDSIGNING --keystore "$ENDPOINT" \
+              --storepass "$token" --alias "$ACCOUNT/$PROFILE" \
+              --tsaurl http://timestamp.acs.microsoft.com --tsmode RFC3161 "$exe"
+          done
+          rm jsign.jar
+
+      - name: Checksums
+        run: |
+          cd release
+          sha256sum Peppermint-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Record build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/Peppermint-*
+
+      - name: Write the release notes
+        env:
+          PREVIOUS_TAG: ${{ needs.prepare.outputs.previous_tag }}
+        run: |
+          node peppermint/scripts/release-notes.mjs --version "$VERSION" --channel "$CHANNEL" \
+            --previous-tag "$PREVIOUS_TAG" --sums release/SHA256SUMS.txt \
+            --mac-signed "$HAS_APPLE_CERT" \
+            --mac-notarized "$([[ "$HAS_APPLE_CERT" == true && "$HAS_APPLE_NOTARY" == true ]] && echo true || echo false)" \
+            --windows-signed "$HAS_AZURE_SIGNING" > notes.md
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      # Beta releases are not marked as pre-releases, so "latest release"
+      # links keep finding them.
+      - name: Create the draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for id in $(gh api "repos/$REPO/releases?per_page=30" --jq ".[] | select(.draft and .tag_name == \"$TAG\") | .id"); do
+            echo "Replacing the earlier draft $id"
+            gh api -X DELETE "repos/$REPO/releases/$id"
+          done
+          title="Peppermint $VERSION"
+          if [[ "$CHANNEL" != Stable ]]; then title+=" $CHANNEL"; fi
+          gh release create "$TAG" release/* --draft --target "$GITHUB_SHA" \
+            --title "$title" --notes-file notes.md
+          id="$(gh api "repos/$REPO/releases?per_page=30" --jq ".[] | select(.draft and .tag_name == \"$TAG\") | .id" | head -1)"
+          echo "release_id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the files for publishing
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: release/
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    needs: [prepare, draft]
+    if: needs.prepare.outputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    # Holds PEPPERMINT_UPDATE_SIGNING_KEY and RELEASES_DEPLOY_KEY. Give it a
+    # required reviewer: the run waits here until the draft is approved.
+    environment: release
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      CHANNEL: ${{ needs.prepare.outputs.channel }}
+      REPO: ${{ github.repository }}
+    steps:
+      # Only Node built-ins run from here on: no npm install while the
+      # signing key is in the environment.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Download the release files
+        uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: release
+
+      - name: Write and sign peppermint.json
+        env:
+          PEPPERMINT_UPDATE_SIGNING_KEY: ${{ secrets.PEPPERMINT_UPDATE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          url="$(node peppermint/scripts/write-update-manifest.mjs location | sed -n 's/^url=//p')"
+          curl -fsSL "$url" -o previous.json
+          node peppermint/scripts/write-update-manifest.mjs --version "$VERSION" --channel "$CHANNEL" \
+            --tag "$TAG" --repo "$REPO" --assets release --previous previous.json --out peppermint.json
+          node peppermint/scripts/sign-update-manifest.mjs sign peppermint.json
+          node peppermint/scripts/sign-update-manifest.mjs verify peppermint.json
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.draft.outputs.release_id }}
+        run: gh api -X PATCH "repos/$REPO/releases/$RELEASE_ID" -F draft=false -f make_latest=true --jq '.html_url'
+
+      - name: Push peppermint.json where the updater reads it
+        env:
+          RELEASES_DEPLOY_KEY: ${{ secrets.RELEASES_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          eval "$(node peppermint/scripts/write-update-manifest.mjs location | grep -E '^(owner|repo|branch|path)=')"
+          mkdir -p ~/.ssh
+          # GitHub's published SSH host key.
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" >> ~/.ssh/known_hosts
+          eval "$(ssh-agent -s)"
+          ssh-add - <<< "$RELEASES_DEPLOY_KEY"
+          git clone --depth 1 --branch "$branch" "git@github.com:$owner/$repo.git" releases-repo
+          cp peppermint.json "releases-repo/$path"
+          cp peppermint.json.sig "releases-repo/$path.sig"
+          cd releases-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$path" "$path.sig"
+          git commit -m "Peppermint $VERSION ($CHANNEL)"
+          git push origin "$branch"
+          ssh-agent -k
+
+      - name: Check what is live
+        run: node peppermint/scripts/write-update-manifest.mjs check-live peppermint.json peppermint.json.sig --timeout 900

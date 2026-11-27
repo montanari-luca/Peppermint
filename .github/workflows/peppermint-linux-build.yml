@@ -1,0 +1,130 @@
+# Linux release build: an optimized, LTO build packaged as the .tar.xz the
+# browser's updater installs (peppermint.linux-<arch>.tar.xz). Called by
+# peppermint-release.yml; can also run on its own.
+name: Peppermint Linux build
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      brand:
+        required: false
+        type: string
+        default: release
+      arch:
+        required: false
+        type: string
+        default: x86_64
+      use_sccache:
+        required: false
+        type: boolean
+        default: true
+  workflow_dispatch:
+    inputs:
+      brand:
+        description: Surfer brand to build
+        required: true
+        type: choice
+        default: release
+        options:
+          - release
+          - twilight
+      arch:
+        description: CPU architecture
+        required: true
+        type: choice
+        default: x86_64
+        options:
+          - x86_64
+          - aarch64
+      use_sccache:
+        description: Use sccache (recommended for repeat builds)
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  linux-build:
+    name: Linux ${{ inputs.arch }}
+    runs-on: ${{ vars.PEPPERMINT_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+      SURFER_FORCE_CANDIDATE: "1"
+      ARCH: ${{ inputs.arch }}
+      BRAND: ${{ inputs.brand }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the build
+        uses: ./.github/actions/peppermint-setup
+        with:
+          platform: linux
+          arch: ${{ inputs.arch }}
+          brand: ${{ inputs.brand }}
+          sccache: ${{ inputs.use_sccache && 'true' || 'false' }}
+
+      - name: Build
+        env:
+          SURFER_COMPAT: ${{ inputs.arch }}
+          ZEN_RELEASE_BRANCH: ${{ inputs.brand }}
+          ZEN_GA_DISABLE_PGO: "1"
+          ZEN_SAFEBROWSING_API_KEY: ${{ secrets.ZEN_SAFEBROWSING_API_KEY }}
+          ZEN_MOZILLA_API_KEY: ${{ secrets.ZEN_MOZILLA_API_KEY }}
+          ZEN_GOOGLE_LOCATION_SERVICE_API_KEY: ${{ secrets.ZEN_GOOGLE_LOCATION_SERVICE_API_KEY }}
+        run: |
+          export SURFER_PLATFORM=linux
+          bash .github/workflows/src/release-build.sh
+
+      # The app is configured with --disable-updater, which also skips
+      # modules/libmar, so packaging needs a host mar tool built on its own.
+      - name: Build host mar tool
+        run: |
+          set -ex
+          cd engine
+          echo "ac_add_options --enable-project=tools/update-packaging" > mar-mozconfig
+          echo "mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-mar-tools" >> mar-mozconfig
+          MOZCONFIG="$PWD/mar-mozconfig" ./mach build -v
+          cp obj-mar-tools/dist/host/bin/mar ../peppermint-host-mar
+          chmod +x ../peppermint-host-mar
+          rm -rf obj-mar-tools mar-mozconfig
+
+      - name: Package
+        env:
+          SURFER_COMPAT: ${{ inputs.arch }}
+          ZEN_GA_DISABLE_PGO: "1"
+        run: |
+          set -ex
+          export SURFER_PLATFORM=linux ZEN_RELEASE=1
+          MAR="$PWD/peppermint-host-mar"
+          export MAR
+          npm run package
+          mv dist/peppermint-*.tar.xz "peppermint.linux-$ARCH.tar.xz"
+
+      # The updater unpacks the tarball and checks application.ini's version
+      # and the binary; check the same here.
+      - name: Check the package
+        run: |
+          set -e
+          expected="$(node -p "require('./peppermint/identity.json').displayVersion")"
+          dir="$(mktemp -d)"
+          tar -xJf "peppermint.linux-$ARCH.tar.xz" -C "$dir" --strip-components=1
+          version="$(sed -n 's/^Version=//p' "$dir/application.ini")"
+          vendor="$(sed -n 's/^Vendor=//p' "$dir/application.ini")"
+          echo "Version=$version Vendor=$vendor"
+          test "$version" = "$expected" || { echo "::error::application.ini has version $version, expected $expected"; exit 1; }
+          test "$vendor" = "MintFlow Technologies" || { echo "::error::application.ini has vendor $vendor"; exit 1; }
+          test -x "$dir/peppermint" || { echo "::error::the package has no peppermint binary"; exit 1; }
+          rm -rf "$dir"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: peppermint.linux-${{ inputs.arch }}.tar.xz
+          path: peppermint.linux-${{ inputs.arch }}.tar.xz
+          retention-days: 14
+          if-no-files-found: error

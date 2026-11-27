@@ -1,5 +1,5 @@
 # Cross-compiled Windows release binaries on Ubuntu (same approach as upstream release CI).
-# Triggers manually or on version tags. PGO is disabled for faster, simpler CI.
+# Runs on demand, or from peppermint-release.yml. PGO is disabled for faster, simpler CI.
 name: Windows Build
 
 permissions:
@@ -26,9 +26,20 @@ on:
         required: false
         type: boolean
         default: true
-  push:
-    tags:
-      - "v*"
+  workflow_call:
+    inputs:
+      brand:
+        required: false
+        type: string
+        default: release
+      include_arm64:
+        required: false
+        type: boolean
+        default: false
+      use_sccache:
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: windows-build-${{ github.workflow }}-${{ github.ref }}
@@ -42,7 +53,7 @@ jobs:
     steps:
       - id: matrix
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.include_arm64 }}" == "true" ]]; then
+          if [[ "${{ inputs.include_arm64 }}" == "true" ]]; then
             echo 'arch=["x86_64","aarch64"]' >> "$GITHUB_OUTPUT"
           else
             echo 'arch=["x86_64"]' >> "$GITHUB_OUTPUT"
@@ -58,17 +69,18 @@ jobs:
       matrix:
         arch: ${{ fromJSON(needs.resolve-matrix.outputs.arch) }}
     env:
-      SCCACHE_GHA_ENABLED: ${{ (github.event_name == 'push' || inputs.use_sccache) && 'true' || 'false' }}
+      SCCACHE_GHA_ENABLED: ${{ inputs.use_sccache && 'true' || 'false' }}
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
-      BRAND: ${{ github.event_name == 'workflow_dispatch' && inputs.brand || 'release' }}
+      BRAND: ${{ inputs.brand || 'release' }}
       # The release brand would download the pinned Firefox release, but src/
       # targets the candidate in surfer.json (what local builds use).
       SURFER_FORCE_CANDIDATE: "1"
 
     steps:
       - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
+        # v1.3.1
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
         with:
           tool-cache: false
 
@@ -83,7 +95,8 @@ jobs:
 
       - name: Enable sccache
         if: env.SCCACHE_GHA_ENABLED == 'true'
-        uses: mozilla-actions/sccache-action@main
+        # v0.0.9
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad
 
       - name: Expose Actions cache variables for sccache
         if: env.SCCACHE_GHA_ENABLED == 'true'

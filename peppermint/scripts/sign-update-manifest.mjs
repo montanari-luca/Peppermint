@@ -19,6 +19,8 @@
  *       Signs with PEPPERMINT_UPDATE_SIGNING_KEY into <json>.sig.
  *   node peppermint/scripts/sign-update-manifest.mjs verify <json> [<sig>] [--key <base64>]
  *       Checks a signature against --key, or the keys the browser trusts.
+ *   node peppermint/scripts/sign-update-manifest.mjs trusted-keys
+ *       Prints the keys the browser trusts, one per line.
  *
  * Only Node built-ins are used, so the release job that holds the key never
  * runs third-party code.
@@ -139,6 +141,11 @@ function main(argv) {
       console.log(`  ${publicKey}`);
       return 0;
     }
+    case "trusted-keys":
+      for (const key of readTrustedKeys()) {
+        console.log(key);
+      }
+      return 0;
     case "public-key":
       console.log(publicKeyOf(process.env[SECRET_ENV]));
       return 0;

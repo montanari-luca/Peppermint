@@ -48,6 +48,9 @@ jobs:
           args: >-
             -color
             .github/workflows/peppermint-checks.yml
+            .github/workflows/peppermint-linux-build.yml
+            .github/workflows/peppermint-macos-build.yml
+            .github/workflows/peppermint-release.yml
             .github/workflows/peppermint-tests.yml
             .github/workflows/sync-zen-firefox.yml
             .github/workflows/windows-build.yml

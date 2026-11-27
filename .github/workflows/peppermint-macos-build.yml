@@ -1,0 +1,271 @@
+# macOS release build: x86_64 and arm64 are cross-compiled on Ubuntu (a
+# hosted macOS runner is too small for two Firefox builds), then a macOS
+# runner merges them into one universal Peppermint.app, signs it and makes
+# peppermint.macos-universal.dmg. Called by peppermint-release.yml; can also
+# run on its own.
+#
+# Signing uses the optional secrets of the "signing" environment
+# (MACOS_CERT_P12_BASE64, MACOS_CERT_PASSWORD, MACOS_NOTARY_KEY_P8_BASE64,
+# MACOS_NOTARY_KEY_ID, MACOS_NOTARY_ISSUER_ID, MACOS_PROVISIONING_PROFILE_BASE64).
+# Without them the app is ad-hoc signed, as local builds are.
+name: Peppermint macOS build
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      brand:
+        required: false
+        type: string
+        default: release
+      use_sccache:
+        required: false
+        type: boolean
+        default: true
+  workflow_dispatch:
+    inputs:
+      brand:
+        description: Surfer brand to build
+        required: true
+        type: choice
+        default: release
+        options:
+          - release
+          - twilight
+      use_sccache:
+        description: Use sccache (recommended for repeat builds)
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  cross-build:
+    name: macOS ${{ matrix.arch }} (cross)
+    runs-on: ${{ vars.PEPPERMINT_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [x86_64, aarch64]
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+      SURFER_FORCE_CANDIDATE: "1"
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the build
+        uses: ./.github/actions/peppermint-setup
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+          brand: ${{ inputs.brand }}
+          sccache: ${{ inputs.use_sccache && 'true' || 'false' }}
+
+      - name: Build
+        env:
+          SURFER_COMPAT: ${{ matrix.arch }}
+          ZEN_RELEASE_BRANCH: ${{ inputs.brand }}
+          ZEN_GA_DISABLE_PGO: "1"
+          ZEN_SAFEBROWSING_API_KEY: ${{ secrets.ZEN_SAFEBROWSING_API_KEY }}
+          ZEN_MOZILLA_API_KEY: ${{ secrets.ZEN_MOZILLA_API_KEY }}
+          ZEN_GOOGLE_LOCATION_SERVICE_API_KEY: ${{ secrets.ZEN_GOOGLE_LOCATION_SERVICE_API_KEY }}
+        run: |
+          export SURFER_PLATFORM=darwin ZEN_CROSS_COMPILING=1
+          bash .github/workflows/src/release-build.sh
+
+      - name: Build host mar tool
+        run: |
+          set -ex
+          cd engine
+          echo "ac_add_options --enable-project=tools/update-packaging" > mar-mozconfig
+          echo "mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-mar-tools" >> mar-mozconfig
+          MOZCONFIG="$PWD/mar-mozconfig" ./mach build -v
+          cp obj-mar-tools/dist/host/bin/mar ../peppermint-host-mar
+          chmod +x ../peppermint-host-mar
+          rm -rf obj-mar-tools mar-mozconfig
+
+      - name: Package
+        env:
+          SURFER_COMPAT: ${{ matrix.arch }}
+          ZEN_GA_DISABLE_PGO: "1"
+        run: |
+          set -ex
+          export SURFER_PLATFORM=darwin ZEN_CROSS_COMPILING=1 ZEN_RELEASE=1
+          MAR="$PWD/peppermint-host-mar"
+          export MAR
+          npm run package
+          mv ./dist/*.dmg "peppermint-$ARCH-apple-darwin.dmg"
+
+      - name: Upload disk image
+        uses: actions/upload-artifact@v4
+        with:
+          name: peppermint-${{ matrix.arch }}-apple-darwin.dmg
+          path: peppermint-${{ matrix.arch }}-apple-darwin.dmg
+          retention-days: 3
+          if-no-files-found: error
+
+  universal:
+    name: macOS universal
+    needs: cross-build
+    runs-on: ${{ vars.PEPPERMINT_MAC_RUNNER || 'macos-26' }}
+    timeout-minutes: 120
+    environment: signing
+    env:
+      SURFER_FORCE_CANDIDATE: "1"
+      BRAND: ${{ inputs.brand }}
+      HAS_APPLE_CERT: ${{ secrets.MACOS_CERT_P12_BASE64 != '' }}
+      HAS_APPLE_NOTARY: ${{ secrets.MACOS_NOTARY_KEY_P8_BASE64 != '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: |
+          brew install gnu-tar
+          npm ci
+
+      - name: Load Surfer CI setup
+        run: npm run surfer -- ci --brand "$BRAND"
+
+      - name: Download Firefox
+        run: npm run download
+
+      - name: Bootstrap
+        run: |
+          cd engine
+          ./mach --no-interactive bootstrap --application-choice browser --no-system-changes || true
+
+      - name: Import patches
+        run: npm run import
+
+      # The disk image tools read the build configuration.
+      - name: Configure
+        env:
+          SURFER_MOZCONFIG_ONLY: "true"
+          ZEN_RELEASE: "1"
+          ZEN_GA_DISABLE_PGO: "1"
+        run: |
+          npm run build
+          cd engine
+          ./mach configure
+
+      - name: Download the x86_64 disk image
+        uses: actions/download-artifact@v4
+        with:
+          name: peppermint-x86_64-apple-darwin.dmg
+
+      - name: Download the arm64 disk image
+        uses: actions/download-artifact@v4
+        with:
+          name: peppermint-aarch64-apple-darwin.dmg
+
+      - name: Merge the two apps into one universal app
+        run: |
+          set -ex
+          cd engine
+          rm -rf ./obj-x86_64-apple-darwin ./obj-aarch64-apple-darwin
+          mkdir -p ./obj-x86_64-apple-darwin/dist ./obj-aarch64-apple-darwin/dist
+          ./mach python -m mozbuild.action.unpack_dmg ../peppermint-x86_64-apple-darwin.dmg ./obj-x86_64-apple-darwin/dist
+          ./mach python -m mozbuild.action.unpack_dmg ../peppermint-aarch64-apple-darwin.dmg ./obj-aarch64-apple-darwin/dist
+          ./mach python ./toolkit/mozapps/installer/unify.py \
+            ./obj-x86_64-apple-darwin/dist/Peppermint.app \
+            ./obj-aarch64-apple-darwin/dist/Peppermint.app
+          archs="$(lipo -archs ./obj-x86_64-apple-darwin/dist/Peppermint.app/Contents/MacOS/peppermint)"
+          echo "Architectures: $archs"
+          [[ "$archs" == *x86_64* && "$archs" == *arm64* ]] || { echo "::error::the app is not universal ($archs)"; exit 1; }
+
+      - name: Sign with the Developer ID certificate
+        if: env.HAS_APPLE_CERT == 'true'
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          PROVISIONING_PROFILE: ${{ secrets.MACOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          set -e
+          cargo install apple-codesign --locked
+          cd engine
+          echo "$CERT_P12" | base64 --decode > signing.p12
+          printf '%s' "$CERT_PASSWORD" > signing.passwd
+          if test -n "$PROVISIONING_PROFILE"; then
+            echo "$PROVISIONING_PROFILE" | base64 --decode > ./embedded.provisionprofile
+          fi
+          ./mach macos-sign -v -r -c release -e production \
+            -a ./obj-x86_64-apple-darwin/dist/Peppermint.app \
+            --rcodesign-p12-file signing.p12 --rcodesign-p12-password-file signing.passwd
+          rm -f signing.p12 signing.passwd embedded.provisionprofile
+
+      - name: Ad-hoc sign
+        if: env.HAS_APPLE_CERT != 'true'
+        run: codesign --force --deep --sign - engine/obj-x86_64-apple-darwin/dist/Peppermint.app
+
+      - name: Make the disk image
+        run: |
+          set -ex
+          branding="engine/browser/branding/$BRAND"
+          extra=()
+          for pair in "background:background.png" "icon:firefox.icns" "dsstore:dsstore"; do
+            if test -f "$branding/${pair#*:}"; then
+              extra+=("--${pair%%:*}" "../$branding/${pair#*:}")
+            fi
+          done
+          cd engine
+          ./mach python -m mozbuild.action.make_dmg --volume-name Peppermint "${extra[@]}" \
+            ./obj-x86_64-apple-darwin/dist/ ../peppermint-universal-temp.dmg
+          cd ..
+          hdiutil convert peppermint-universal-temp.dmg -format UDZO -imagekey zlib-level=9 -o peppermint.macos-universal.dmg
+          rm peppermint-universal-temp.dmg
+
+      - name: Notarize
+        if: env.HAS_APPLE_CERT == 'true' && env.HAS_APPLE_NOTARY == 'true'
+        env:
+          NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+        run: |
+          set -e
+          echo "$NOTARY_KEY" | base64 --decode > notary.p8
+          xcrun notarytool submit peppermint.macos-universal.dmg \
+            --key notary.p8 --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID" --wait
+          rm -f notary.p8
+          xcrun stapler staple peppermint.macos-universal.dmg
+
+      # The updater installs the one .app it finds in the disk image.
+      - name: Check the disk image
+        run: |
+          set -e
+          mount="$(mktemp -d)"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount" peppermint.macos-universal.dmg
+          apps="$(find "$mount" -maxdepth 1 -name '*.app' | wc -l | tr -d ' ')"
+          version="$(sed -n 's/^Version=//p' "$mount/Peppermint.app/Contents/Resources/application.ini")"
+          hdiutil detach "$mount"
+          expected="$(node -p "require('./peppermint/identity.json').displayVersion")"
+          echo "apps=$apps version=$version"
+          test "$apps" = 1 || { echo "::error::the disk image holds $apps apps"; exit 1; }
+          test "$version" = "$expected" || { echo "::error::the app has version $version, expected $expected"; exit 1; }
+
+      - name: Upload disk image
+        uses: actions/upload-artifact@v4
+        with:
+          name: peppermint.macos-universal.dmg
+          path: peppermint.macos-universal.dmg
+          retention-days: 14
+          if-no-files-found: error
