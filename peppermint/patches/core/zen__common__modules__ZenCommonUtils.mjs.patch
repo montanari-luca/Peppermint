@@ -9,9 +9,9 @@
    kZenOSToSmallName: {
      WINNT: "windows",
      Darwin: "macos",
-@@ -15,6 +15,11 @@
-   },
- };
+@@ -25,6 +25,11 @@
+   Cc["@mozilla.org/widget/clipboardhelper;1"].getService(Ci.nsIClipboardHelper)
+ );
  
 +// This module is also imported from system scopes that have no window.
 +if (typeof window !== "undefined") {
@@ -21,13 +21,13 @@
  export class nsZenMultiWindowFeature {
    constructor() {}
  
-@@ -68,19 +73,38 @@
+@@ -78,19 +83,41 @@
    }
  }
  
-+function scheduleLateInit(initBound, eventName, alreadyPassed) {
++function scheduleLateInit(initBound, eventName, alreadyPassed, target) {
 +  if (!alreadyPassed) {
-+    document.addEventListener(eventName, initBound, { once: true });
++    target.addEventListener(eventName, initBound, { once: true });
 +    return;
 +  }
 +  const features = window.gZenLazyFeatures;
@@ -44,10 +44,12 @@
 -    document.addEventListener("DOMContentLoaded", initBound, { once: true });
 +    // Private fields exist only after super() returns, so a late import
 +    // cannot call init() from inside this constructor.
++    // On the window, like Firefox's own handler that creates gBrowser.
 +    scheduleLateInit(
 +      this.init.bind(this),
 +      "DOMContentLoaded",
-+      window.gZenLazyFeatures?.pastContent
++      window.gZenLazyFeatures?.pastContent,
++      window
 +    );
    }
  }
@@ -61,7 +63,8 @@
 +    scheduleLateInit(
 +      this.init.bind(this),
 +      "MozBeforeInitialXULLayout",
-+      window.gZenLazyFeatures?.pastLayout
++      window.gZenLazyFeatures?.pastLayout,
++      document
 +    );
    }
  }

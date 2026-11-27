@@ -1,6 +1,6 @@
 --- a/zen/common/modules/ZenStartup.mjs
 +++ b/zen/common/modules/ZenStartup.mjs
-@@ -27,8 +27,22 @@
+@@ -28,8 +28,22 @@
    }
  
    init() {
@@ -23,9 +23,13 @@
    }
  
    get #shouldUseWatermark() {
-@@ -66,6 +80,11 @@
+@@ -71,8 +85,14 @@
+         .getElementById("browser")
+         .prepend(document.getElementById("notifications-toolbar"));
  
-       gZenWorkspaces.init().then(() => {
+-      gZenWorkspaces.init().then(() => {
++      gZenWorkspaces.init().then(async () => {
++        await this.#promiseTabbrowser();
          gZenUIManager.init();
 +        try {
 +          gZenLazyFeatures.load("homepage");
@@ -35,7 +39,28 @@
          this.#checkForWelcomePage();
        });
      } catch (e) {
-@@ -180,6 +199,7 @@
+@@ -91,6 +111,20 @@
+     }
+   }
+ 
++  /**
++   * Firefox creates gBrowser in its window DOMContentLoaded handler, which
++   * runs after MozBeforeInitialXULLayout. This listener is added later, so it
++   * fires once gBrowser exists.
++   */
++  #promiseTabbrowser() {
++    if (window.gBrowser) {
++      return Promise.resolve();
++    }
++    return new Promise(resolve => {
++      window.addEventListener("DOMContentLoaded", resolve, { once: true });
++    });
++  }
++
+   #stopObservingDelayedStartup() {
+     if (!this.#observingDelayedStartup) {
+       return;
+@@ -210,6 +244,7 @@
          "zen.updates.last-version",
          Services.appinfo.version
        );

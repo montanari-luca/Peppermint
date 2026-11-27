@@ -5,16 +5,33 @@
 
 const VAULT_PREF = "peppermint.vault.enabled";
 const VAULT_URL = "moz-src:///peppermint/vault/PeppermintVault.sys.mjs";
-const SIDEBAR_STYLE = "chrome://browser/content/zen-styles/peppermint-sidebar.css";
+const SIDEBAR_STYLE =
+  "chrome://browser/content/zen-styles/peppermint-sidebar.css";
 const SITE_PRIVACY_FTL = "browser/peppermint-site-privacy.ftl";
 
-// Zen's window sync rejects while a test window is set up (see the
-// window_sync suite); that is not what these tests are about.
-const { PromiseTestUtils } = ChromeUtils.importESModule(
-  "resource://testing-common/PromiseTestUtils.sys.mjs"
-);
-PromiseTestUtils.allowMatchingRejectionsGlobally(/gBrowser is undefined/);
-PromiseTestUtils.allowMatchingRejectionsGlobally(/^undefined$/);
+// Zen's UI manager needs gBrowser, which Firefox creates at DOMContentLoaded.
+add_task(async function test_new_window_finishes_zen_ui_startup() {
+  Assert.ok(window.gZenSiteDataPanel, "The first window has a site panel");
+
+  const tabsBefore = new Set(gBrowser.tabs);
+  const win = await BrowserTestUtils.openNewBrowserWindow();
+  await win.document.l10n.ready;
+  Assert.ok(win.gZenSiteDataPanel, "A new window has a site panel");
+
+  const copyButton = win.document.getElementById("zen-copy-url-button");
+  const browser = win.gBrowser.selectedBrowser;
+  BrowserTestUtils.startLoadingURIString(browser, "https://example.com/");
+  await BrowserTestUtils.browserLoaded(browser, false, "https://example.com/");
+  await TestUtils.waitForCondition(
+    () => !copyButton.hasAttribute("disabled"),
+    "The site panel follows navigation in a new window"
+  );
+
+  await BrowserTestUtils.closeWindow(win);
+  for (const tab of gBrowser.tabs.filter(tab => !tabsBefore.has(tab))) {
+    BrowserTestUtils.removeTab(tab);
+  }
+});
 
 add_task(async function test_disabled_feature_is_not_imported() {
   Assert.ok(!Services.prefs.getBoolPref(VAULT_PREF), "Vault starts off");

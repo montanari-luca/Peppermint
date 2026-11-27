@@ -250,7 +250,9 @@ document.addEventListener(
   () => loadGroup("layout"),
   { once: true }
 );
-document.addEventListener("DOMContentLoaded", () => loadGroup("content"), {
+// On the window, after Firefox's handler that creates gBrowser (this module is
+// imported after browser-main.js adds it).
+window.addEventListener("DOMContentLoaded", () => loadGroup("content"), {
   once: true,
 });
 

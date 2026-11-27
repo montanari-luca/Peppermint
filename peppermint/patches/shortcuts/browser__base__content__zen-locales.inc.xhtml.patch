@@ -1,0 +1,10 @@
+--- a/browser/base/content/zen-locales.inc.xhtml
++++ b/browser/base/content/zen-locales.inc.xhtml
+@@ -7,6 +7,7 @@
+ <link rel="localization" href="browser/zen-split-view.ftl"/>
+ <link rel="localization" href="browser/zen-general.ftl"/>
+ <link rel="localization" href="browser/zen-menubar.ftl"/>
++<link rel="localization" href="browser/peppermint-shortcut-sheet.ftl"/>
+ <link rel="localization" href="browser/zen-vertical-tabs.ftl"/>
+ <link rel="localization" href="browser/zen-folders.ftl"/>
+ <link rel="localization" href="browser/zen-boosts.ftl"/>
