@@ -149,17 +149,6 @@ ac_add_options --disable-debug-symbols
         npm run import
     }
 
-    python3 -c @'
-from pathlib import Path
-vendor = Path("engine/browser/moz.configure")
-text = vendor.read_text(encoding="utf-8")
-old = "imply_option(\"MOZ_APP_VENDOR\", \"Mozilla\")"
-new = "imply_option(\"MOZ_APP_VENDOR\", \"MintFlow Technologies\")"
-if old in text:
-    vendor.write_text(text.replace(old, new, 1), encoding="utf-8")
-    print("Set the application vendor to MintFlow Technologies")
-'@
-
     Write-Step "Selecting the Peppermint release brand"
     npm run surfer -- set brand release
 

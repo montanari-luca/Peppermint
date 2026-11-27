@@ -129,7 +129,22 @@ function apply() {
       ["-p1", "--forward", "--batch", "--no-backup-if-mismatch", "-i", patchPath],
       engineDir
     );
-    if (!result.ok) {
+    // The engine can already carry the change, for instance from an old build
+    // script that edited the file in place. Record it as applied so that
+    // `revert` still restores Zen's copy.
+    const alreadyApplied =
+      !result.ok &&
+      runPatch(
+        ["-p1", "-R", "--dry-run", "--batch", "--no-backup-if-mismatch", "-i", patchPath],
+        engineDir
+      ).ok;
+    if (alreadyApplied) {
+      for (const target of targets) {
+        fs.rmSync(path.join(engineDir, `${target}.rej`), { force: true });
+      }
+      console.log(`apply-overlay: ${rel} was already in the engine`);
+    }
+    if (!result.ok && !alreadyApplied) {
       failures.push({ rel, output: result.output.trim() });
       continue;
     }

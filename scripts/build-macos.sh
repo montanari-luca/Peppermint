@@ -149,15 +149,6 @@ if "unknown options: --version" not in text and old in text:
     linker.write_text(text.replace(old, new, 1))
     print("Patched Xcode 27 linker detection")
 
-vendor = Path("engine/browser/moz.configure")
-vendor_text = vendor.read_text()
-updated = vendor_text.replace(
-    'imply_option("MOZ_APP_VENDOR", "Mozilla")',
-    'imply_option("MOZ_APP_VENDOR", "MintFlow Technologies")',
-)
-if updated != vendor_text:
-    vendor.write_text(updated)
-    print("Set the application vendor to MintFlow Technologies")
 PY
 
   log "Selecting the Peppermint release brand"
