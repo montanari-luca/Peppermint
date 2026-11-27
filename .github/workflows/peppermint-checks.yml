@@ -1,0 +1,52 @@
+# Fast checks that need no Firefox build: every test suite is registered, the
+# release and CI scripts pass their own tests, and Peppermint's workflows lint.
+name: Peppermint checks
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - mine
+  push:
+    branches:
+      - mine
+    paths:
+      - ".github/workflows/**"
+      - "peppermint/**"
+      - "src/peppermint/**"
+  workflow_dispatch:
+
+concurrency:
+  group: peppermint-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Test suites are registered
+        run: node peppermint/scripts/ci-tests.mjs --check
+
+      - name: Script tests
+        run: node --test "peppermint/scripts/tests/*.test.mjs"
+
+      # Only Peppermint's workflows: Zen's stay as upstream wrote them.
+      - name: Lint Peppermint workflows
+        uses: docker://rhysd/actionlint:1.7.9
+        with:
+          args: >-
+            -color
+            .github/workflows/peppermint-checks.yml
+            .github/workflows/peppermint-tests.yml
+            .github/workflows/windows-build.yml

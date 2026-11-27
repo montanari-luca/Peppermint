@@ -1,0 +1,142 @@
+# Builds Peppermint for Linux with tests enabled and runs every Peppermint
+# browser test suite (peppermint/scripts/ci-tests.mjs). Release builds are
+# configured with --disable-tests, so this is its own build.
+#
+# Runs nightly on `mine` (skipped when that commit already passed), on demand,
+# from the release workflow, and on pull requests from an upstream sync or
+# labeled "full-tests".
+name: Peppermint tests
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+    inputs:
+      suites:
+        description: Suites to run, separated by spaces (empty runs all Peppermint suites)
+        required: false
+        type: string
+        default: ""
+      zen:
+        description: Also run Zen's suites (reported, never fail the run)
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      suites:
+        required: false
+        type: string
+        default: ""
+      zen:
+        required: false
+        type: boolean
+        default: false
+  pull_request:
+    branches:
+      - mine
+    types: [opened, synchronize, reopened, labeled]
+
+# A newer push to a pull request replaces its running tests; every other run
+# (nightly, manual, called by a release) runs on its own.
+concurrency:
+  group: peppermint-tests-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          run=true
+          case "$EVENT" in
+            pull_request)
+              if [[ "$HEAD_REF" != sync/upstream-* ]] && ! jq -e 'index("full-tests")' <<<"$LABELS" >/dev/null; then
+                run=false
+              fi
+              ;;
+            schedule)
+              last="$(gh api "repos/$REPO/actions/workflows/peppermint-tests.yml/runs?branch=mine&event=schedule&status=success&per_page=1" \
+                --jq '.workflow_runs[0].head_sha // ""' || true)"
+              if [[ "$last" == "$SHA" ]]; then
+                echo "mine is unchanged since the last passing nightly run"
+                run=false
+              fi
+              ;;
+          esac
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  tests:
+    name: Linux x86_64 tests
+    needs: decide
+    if: needs.decide.outputs.run == 'true'
+    runs-on: ${{ vars.PEPPERMINT_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+      SURFER_FORCE_CANDIDATE: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the build
+        uses: ./.github/actions/peppermint-setup
+        with:
+          platform: linux
+          arch: x86_64
+          language-packs: "false"
+
+      # An optimized build with tests, without the release-only LTO and
+      # debug symbols. The wasm library sandbox is left out only to save
+      # build time: this build is never shipped.
+      - name: Write the test mozconfig
+        run: |
+          cat > mozconfig <<'EOF'
+          # Written by .github/workflows/peppermint-tests.yml
+          ac_add_options --disable-debug-symbols
+          ac_add_options --without-wasm-sandboxed-libraries
+          EOF
+
+      - name: Build
+        env:
+          SURFER_COMPAT: x86_64
+          SURFER_PLATFORM: linux
+        run: |
+          # shellcheck disable=SC1091
+          . "$HOME/.cargo/env"
+          export CC="$HOME/.mozbuild/clang/bin/clang" CXX="$HOME/.mozbuild/clang/bin/clang++"
+          ulimit -n 4096
+          npm run build
+
+      - name: Run the browser tests
+        env:
+          SUITES: ${{ inputs.suites }}
+          WITH_ZEN: ${{ inputs.zen && '--zen' || '' }}
+        run: |
+          # shellcheck disable=SC2086
+          node peppermint/scripts/ci-tests.mjs $SUITES $WITH_ZEN --logs test-logs
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peppermint-test-logs
+          path: test-logs/
+          retention-days: 14
+          if-no-files-found: ignore
