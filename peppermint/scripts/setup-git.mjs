@@ -39,9 +39,9 @@ for (const [key, { name, driver }] of Object.entries(drivers)) {
   git("config", `merge.${key}.driver`, driver);
 }
 
-try {
-  git("remote", "get-url", "upstream");
-} catch {
+// Listing the remotes, unlike `git remote get-url`, prints no error when
+// upstream is missing (it showed up in every CI log that runs npm ci).
+if (!git("remote").split(/\r?\n/).includes("upstream")) {
   git("remote", "add", "upstream", "https://github.com/zen-browser/desktop.git");
 }
 console.log("setup-git: merge drivers registered");

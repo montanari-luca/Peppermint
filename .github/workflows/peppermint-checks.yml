@@ -47,6 +47,7 @@ jobs:
         with:
           args: >-
             -color
+            .github/workflows/npm-audit-weekly.yml
             .github/workflows/peppermint-checks.yml
             .github/workflows/peppermint-linux-build.yml
             .github/workflows/peppermint-macos-build.yml

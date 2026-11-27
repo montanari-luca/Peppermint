@@ -15,7 +15,7 @@ Releases are built, tested, signed and published by `.github/workflows/peppermin
    - Secret `RELEASES_DEPLOY_KEY`: the private half of an SSH deploy key with write access to `montanari-luca/MintFlow-Releases` (create it with `ssh-keygen -t ed25519 -N "" -f mintflow-releases`, add the `.pub` file as a deploy key there with write access).
 3. **Repository secrets**:
    - `ZEN_SAFEBROWSING_API_KEY`: Peppermint's own Google Safe Browsing key. Without it, phishing and malware protection does not work in the built browser.
-   - `SYNC_TOKEN`: a fine-grained token for this repository (contents, pull requests, issues and workflows: read and write) for the daily Zen sync.
+   - `SYNC_TOKEN`: a fine-grained token for this repository (contents, pull requests, issues and workflows: read and write) for the daily Zen sync and the weekly npm audit pull request.
 4. **Optional signing** (environment `signing`). Each part turns on by itself once its secrets exist:
    - macOS Developer ID: `MACOS_CERT_P12_BASE64`, `MACOS_CERT_PASSWORD`, `MACOS_PROVISIONING_PROFILE_BASE64` (for passkeys). Notarization: `MACOS_NOTARY_KEY_P8_BASE64`, `MACOS_NOTARY_KEY_ID`, `MACOS_NOTARY_ISSUER_ID` (an App Store Connect API key).
    - Windows (Azure Trusted Signing): secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` (federated with this repository), and variables `AZURE_SIGNING_ENDPOINT` (for example `weu.codesigning.azure.net`), `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE`. Only the installers are signed.
