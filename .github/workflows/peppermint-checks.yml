@@ -49,4 +49,5 @@ jobs:
             -color
             .github/workflows/peppermint-checks.yml
             .github/workflows/peppermint-tests.yml
+            .github/workflows/sync-zen-firefox.yml
             .github/workflows/windows-build.yml

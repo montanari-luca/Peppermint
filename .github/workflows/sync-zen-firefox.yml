@@ -1,0 +1,171 @@
+# Merges zen-browser/desktop (dev) into a sync/upstream-<date> branch every
+# day, proves that every Peppermint overlay patch still applies, and opens a
+# pull request into mine (peppermint/scripts/sync-upstream.mjs). The pull
+# request then gets pr-test.yml and the full browser tests. Merge it with a
+# merge commit, never squash or rebase.
+#
+# Needs the SYNC_TOKEN secret: a fine-grained token for this repository with
+# read and write access to contents, pull requests, issues and workflows. The
+# built-in token cannot push Zen's workflow changes, and pull requests it
+# opens start no checks. Without the secret the run only explains what is
+# missing.
+name: Sync Zen and Firefox
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+    inputs:
+      push:
+        description: Push the sync branch and open the pull request
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: sync-zen-firefox
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HAS_SYNC_TOKEN: ${{ secrets.SYNC_TOKEN != '' }}
+      PUSH: ${{ github.event_name == 'schedule' || inputs.push }}
+      SURFER_FORCE_CANDIDATE: "1"
+    steps:
+      - name: Explain a missing token
+        if: env.HAS_SYNC_TOKEN != 'true'
+        run: |
+          echo "::notice::Set the SYNC_TOKEN secret to sync Zen daily (see the comment at the top of sync-zen-firefox.yml)."
+
+      - name: Checkout mine
+        if: env.HAS_SYNC_TOKEN == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: mine
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN }}
+
+      - name: Setup Node.js
+        if: env.HAS_SYNC_TOKEN == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Setup Git
+        if: env.HAS_SYNC_TOKEN == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # A sync pull request that someone has pushed fixes to is left alone,
+      # and nothing new is merged until it lands. An untouched one is
+      # replaced by today's.
+      - name: Check for an open sync pull request
+        if: env.HAS_SYNC_TOKEN == 'true'
+        id: open
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          skip=false
+          while read -r number branch sha; do
+            [[ -n "$number" ]] || continue
+            author="$(gh api "repos/$REPO/commits/$sha" --jq '.commit.committer.name')"
+            message="$(gh api "repos/$REPO/commits/$sha" --jq '.commit.message')"
+            if [[ "$author" == "github-actions[bot]" && "$message" == "Merge upstream/dev into "* ]]; then
+              if [[ "$PUSH" == "true" ]]; then
+                echo "Closing #$number ($branch): superseded by today's sync"
+                gh api -X POST "repos/$REPO/issues/$number/comments" \
+                  -f body="Superseded by a newer upstream sync."
+                gh api -X PATCH "repos/$REPO/pulls/$number" -f state=closed >/dev/null
+                gh api -X DELETE "repos/$REPO/git/refs/heads/$branch" || true
+              fi
+            else
+              echo "::notice::#$number ($branch) has fixes on it; merge it before the next sync."
+              skip=true
+            fi
+          done < <(gh api "repos/$REPO/pulls?state=open&base=mine&per_page=100" \
+            --jq '.[] | select(.head.ref | startswith("sync/upstream-")) | "\(.number) \(.head.ref) \(.head.sha)"')
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
+      - name: Install Node dependencies
+        if: env.HAS_SYNC_TOKEN == 'true' && steps.open.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Merge, check the import, open the pull request
+        if: env.HAS_SYNC_TOKEN == 'true' && steps.open.outputs.skip != 'true'
+        id: sync
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          flags=(--check-import --download --report sync-report.json)
+          if [[ "$PUSH" == "true" ]]; then
+            flags+=(--push --pr)
+          fi
+          set +e
+          node peppermint/scripts/sync-upstream.mjs "${flags[@]}"
+          code=$?
+          set -e
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if test -f sync-report.json; then
+            cat sync-report.json
+            {
+              echo "### Upstream sync"
+              echo '```json'
+              cat sync-report.json
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Conflicts that need a decision are tracked in one issue, updated by
+      # every run until the merge goes through.
+      - name: Report conflicts
+        if: steps.sync.outputs.code == '2' && env.PUSH == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          files="$(jq -r '.conflicts[] | "- `\(.)`"' sync-report.json)"
+          behind="$(jq -r '.behind' sync-report.json)"
+          # shellcheck disable=SC2016 # the backticks are Markdown
+          body="$(printf 'Merging %s Zen commits into `mine` stopped on conflicts that need a decision:\n\n%s\n\nResolve them locally with `node peppermint/scripts/sync-upstream.mjs`, fix the files, commit the merge and push it as a `sync/upstream-*` branch.\n\nLast run: %s\n' "$behind" "$files" "$RUN_URL")"
+          number="$(gh api "repos/$REPO/issues?state=open&labels=upstream-sync&per_page=1" --jq '.[0].number // ""')"
+          if [[ -n "$number" ]]; then
+            gh api -X PATCH "repos/$REPO/issues/$number" -f body="$body" >/dev/null
+            echo "Updated #$number"
+          else
+            gh api -X POST "repos/$REPO/issues" -f title="Upstream sync needs a decision" \
+              -f body="$body" -f "labels[]=upstream-sync" --jq '.html_url'
+          fi
+
+      - name: Close the conflict issue once a sync goes through
+        if: steps.sync.outputs.code == '0' && env.PUSH == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          for number in $(gh api "repos/$REPO/issues?state=open&labels=upstream-sync&per_page=10" --jq '.[].number'); do
+            gh api -X POST "repos/$REPO/issues/$number/comments" -f body="The upstream sync merged cleanly again."
+            gh api -X PATCH "repos/$REPO/issues/$number" -f state=closed >/dev/null
+          done
+
+      - name: Fail on a sync that needs attention
+        if: steps.sync.outputs.code != '' && steps.sync.outputs.code != '0'
+        env:
+          CODE: ${{ steps.sync.outputs.code }}
+        run: |
+          case "$CODE" in
+            2) echo "::error::Zen changed files Peppermint edits; see the upstream-sync issue." ;;
+            3) echo "::error::An overlay patch no longer applies; the sync pull request is marked FAILED." ;;
+            4) echo "::error::The Firefox source could not be downloaded." ;;
+            *) echo "::error::sync-upstream.mjs exited with $CODE." ;;
+          esac
+          exit 1

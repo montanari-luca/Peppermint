@@ -6,7 +6,8 @@
  * Merge zen-browser/desktop (upstream/dev) into a Peppermint sync branch.
  *
  *   node peppermint/scripts/sync-upstream.mjs [--base mine] [--check-import]
- *                                             [--push] [--pr]
+ *                                             [--download] [--push] [--pr]
+ *                                             [--report <file.json>]
  *
  * 1. fetch upstream/dev and branch sync/upstream-<date> off --base
  * 2. merge it; the drivers registered by setup-git.mjs resolve surfer.json,
@@ -18,6 +19,15 @@
  *
  * Anything else that conflicts is a real decision: the merge is aborted and the
  * conflicting paths are printed.
+ *
+ * --download fetches the Firefox source after the merge (which can move the
+ * pinned version) and before the import check, for a fresh checkout such as
+ * CI's. --report writes the outcome as JSON for .github/workflows/
+ * sync-zen-firefox.yml: { status: "up-to-date" | "merged" | "conflicts" |
+ * "download-failed" | "import-failed", branch, behind, conflicts, pr }.
+ *
+ * Exit codes: 0 merged or nothing to do, 2 conflicts, 3 import failed,
+ * 4 download failed.
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -51,6 +61,14 @@ const owned = JSON.parse(fs.readFileSync(path.join(root, "peppermint", "owned-pa
 const base = option("--base", "mine");
 const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 const branch = `sync/upstream-${stamp}`;
+const reportFile = option("--report", null);
+
+function finish(code, report) {
+  if (reportFile) {
+    fs.writeFileSync(reportFile, `${JSON.stringify({ branch, ...report }, null, 2)}\n`);
+  }
+  process.exit(code);
+}
 
 if (git("status", "--porcelain")) {
   console.error("sync-upstream: the working tree has uncommitted changes");
@@ -61,7 +79,7 @@ git("fetch", "--no-tags", "upstream", "+refs/heads/dev:refs/remotes/upstream/dev
 
 if (tryGit("merge-base", "--is-ancestor", "upstream/dev", base).ok) {
   console.log(`sync-upstream: ${base} already contains upstream/dev`);
-  process.exit(0);
+  finish(0, { status: "up-to-date", behind: 0 });
 }
 
 const behind = git("rev-list", "--count", `${base}..upstream/dev`);
@@ -94,7 +112,7 @@ if (!merge.ok) {
     git("checkout", base);
     console.error(`sync-upstream: ${left.length} conflicts need a human decision:`);
     left.forEach(f => console.error(`  ${f}`));
-    process.exit(2);
+    finish(2, { status: "conflicts", behind: Number(behind), conflicts: left });
   }
 }
 
@@ -105,6 +123,13 @@ if (!run("npm", ["install", "--package-lock-only", "--ignore-scripts", "--no-aud
   console.warn("sync-upstream: could not refresh package-lock.json, review it by hand");
 }
 git("add", "-A", "surfer.json", "package-lock.json");
+
+if (flag("--download") && !run("npm", ["run", "download"])) {
+  git("merge", "--abort");
+  git("checkout", base);
+  console.error("sync-upstream: npm run download failed");
+  finish(4, { status: "download-failed", behind: Number(behind) });
+}
 
 let importReport = "not run";
 if (flag("--check-import")) {
@@ -126,6 +151,7 @@ if (flag("--check-import")) {
 git("-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", `Merge upstream/dev into ${base} (${stamp})`);
 console.log(`sync-upstream: committed on ${branch}, import check: ${importReport}`);
 
+let prUrl = null;
 if (flag("--push")) {
   const origin = git("remote", "get-url", "--push", "origin").toLowerCase();
   if (origin.includes("zen-browser/desktop")) {
@@ -139,9 +165,20 @@ if (flag("--push")) {
       `- import check: **${importReport}**\n` +
       "- surfer.json, package-lock.json and branding were resolved by the merge drivers\n" +
       "- review any file under `src/` listed in `peppermint/compat-patches.txt`: those are Zen patches re-adapted to the pinned Firefox\n";
-    run("gh", ["pr", "create", "--base", base, "--head", branch, "--title", `Merge upstream Zen (${stamp})`, "--body", body]);
+    // A second run on the same day finds the pull request already open.
+    const pr = spawnSync(
+      "gh",
+      ["pr", "create", "--base", base, "--head", branch, "--title", `Merge upstream Zen (${stamp})`, "--body", body],
+      { cwd: root, encoding: "utf8" }
+    );
+    prUrl = (pr.stdout ?? "").trim().split("\n").pop() || null;
+    if (pr.status !== 0) {
+      console.warn(`sync-upstream: no new pull request: ${(pr.stderr ?? "").trim()}`);
+    }
   }
 }
-if (importReport === "FAILED") {
-  process.exit(3);
-}
+finish(importReport === "FAILED" ? 3 : 0, {
+  status: importReport === "FAILED" ? "import-failed" : "merged",
+  behind: Number(behind),
+  pr: prUrl,
+});
