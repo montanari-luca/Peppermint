@@ -25,6 +25,7 @@ Peppermint is a layer on top of Zen (zen-browser/desktop), which is merged in ev
 - Branding assets: `configs/branding/` (kept on merges). Brand identity fields: `peppermint/identity.json`.
 - The only Zen files that may be edited in place are listed in `peppermint/owned-paths.json`. The pre-commit hook (`peppermint/scripts/check-owned.mjs`) and the PR test enforce this, and also reject added exec bits.
 - Do not rename internal `gZen*`, `zen.*` or `nsZen*` names; only user-visible brand text changes.
+- No AI features. A new Firefox AI pref that defaults to on is turned off in `prefs/peppermint/no-ai.yaml` (the `privacy_defaults` test fails until it is).
 
 ## Branches and upstream merges
 
@@ -34,6 +35,8 @@ Peppermint is a layer on top of Zen (zen-browser/desktop), which is merged in ev
 - If the sync PR reports a failed overlay patch, Zen changed lines Peppermint edits: fix the file under `engine/`, run `npm run pm:record -- <engine path> <feature>`, and push to the sync branch.
 - Patches listed in `peppermint/compat-patches.txt` are Zen patches that `npm run import` adapts to the pinned Firefox. After a merge, take Zen's copy and let the import regenerate them.
 - `dev` is not used. Do not commit to it.
+- Releases are built, tested and published only by `.github/workflows/peppermint-release.yml` (see `peppermint/RELEASING.md`), never from a local build.
+- CI: `peppermint-checks.yml` on every push (each test suite listed in `moz.build`, `node --test "peppermint/scripts/tests/*.test.mjs"`, workflow lint) and `peppermint-tests.yml` nightly (all browser suites). Keep both green.
 
 ## Commands
 

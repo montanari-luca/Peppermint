@@ -14,11 +14,11 @@
 _Peppermint is an independent fork._
 
 [![License: MPL-2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Firefox Version](https://img.shields.io/badge/Firefox-159.0.1-orange.svg)](https://www.mozilla.org/firefox/)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/montanari-luca/Peppermint/actions)
+[![Firefox Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmontanari-luca%2FPeppermint%2Fmine%2Fsurfer.json&query=%24.version.candidate&label=Firefox&color=orange)](https://www.mozilla.org/firefox/)
+[![Tests](https://github.com/montanari-luca/Peppermint/actions/workflows/peppermint-tests.yml/badge.svg?branch=mine)](https://github.com/montanari-luca/Peppermint/actions/workflows/peppermint-tests.yml)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/montanari-luca/Peppermint/releases)
 
-[📥 Download Latest Release](https://github.com/montanari-luca/Peppermint/releases/latest) • [🐛 Report Bug](https://github.com/montanari-luca/Peppermint/issues/new?template=bug_report.md) • [💡 Request Feature](https://github.com/montanari-luca/Peppermint/issues/new?template=feature_request.md) • [📖 Documentation](https://peppermint.mintflow.dev/docs/)
+[📥 Download Latest Release](https://github.com/montanari-luca/Peppermint/releases/latest) • [🐛 Report Bug](https://github.com/montanari-luca/Peppermint/issues/new?template=bug_report.yml) • [💡 Request Feature](https://github.com/montanari-luca/Peppermint/issues/new?template=feature_request.yml) • [📖 Documentation](https://peppermint.mintflow.dev/docs/)
 
 </div>
 
@@ -30,7 +30,7 @@ Modern browsers focus too much on adding useless features that you'll maybe end 
 
 |       🎯 **Focus First**        |     🛡️ **Privacy by Default**     |  ⚡ **Performance Tuned**  |
 | :-----------------------------: | :-------------------------------: | :------------------------: |
-|     Zen-inspired minimal UI     | No telemetry, no studies, no ads  | Optimized startup & memory |
+|     Zen-inspired minimal UI     | No telemetry, no AI, no ads  | Optimized startup & memory |
 |   Vertical tabs that breathe    |  Privacy defaults & clean links   |  PGO/LTO optimized builds  |
 | Command palette for power users | Ad blocker set up on first launch |  Native vertical tab bar   |
 
@@ -59,6 +59,8 @@ Modern browsers focus too much on adding useless features that you'll maybe end 
 - More secure Ghost mode
 - Polished frosted glass UI
 - No telemetry
+- No AI: Firefox's chatbots, AI tab grouping, link previews, semantic history and Smart Window stay off
+- Signed updates: an update installs only with a valid signature and checksum
 
 ### Improved upon Zen
 
@@ -76,6 +78,18 @@ Modern browsers focus too much on adding useless features that you'll maybe end 
 - No QR code passkey sign-in on MacOS
 
 [Temporary Fixes](KITF.md)
+
+---
+
+### Verify your download
+
+Each release lists the SHA-256 of every file (in `SHA256SUMS.txt` and the release notes), and GitHub records how each file was built. To check a file:
+
+```bash
+gh attestation verify Peppermint-<version>-macos-universal.dmg --repo montanari-luca/Peppermint
+```
+
+Installed copies do this for you: an update installs only when its signed update information and its checksum both match.
 
 ---
 
@@ -139,13 +153,17 @@ npm start
 
 `npm run build` caps parallel jobs to the machine (one per 4 GB of RAM, two cores free). Override with `PM_BUILD_JOBS=<n>`.
 
+### Releases and CI
+
+GitHub Actions builds, tests and publishes releases for Windows, macOS (universal) and Linux; see [peppermint/RELEASING.md](peppermint/RELEASING.md). The browser tests run nightly, and Zen is merged in daily through a pull request (`sync-zen-firefox.yml`).
+
 ---
 
 ### Key Technologies
 
 | Layer            | Technology                                                          |
 | ---------------- | ------------------------------------------------------------------- |
-| **Engine**       | Firefox 159.0.1 (Gecko)                                             |
+| **Engine**       | Firefox (Gecko), version in `surfer.json`                           |
 | **Base**         | [Zen Browser](https://github.com/zen-browser/desktop), merged daily |
 | **UI**           | Browser chrome in JavaScript modules, XHTML and CSS                 |
 | **Build System** | [Surfer](https://github.com/zen-browser/surfer)                     |
@@ -197,6 +215,10 @@ On first launch Peppermint offers to install a content blocker of your choice: u
 ### Startup Doctor
 
 `about:report` shows how long recent launches took, which features and mods slow startup down, and lets you turn them off.
+
+### No AI
+
+Peppermint ships no AI features. Firefox's chatbot sidebar, AI tab grouping, link previews, semantic history search, Smart Window and the extension ML API are all off (`prefs/peppermint/no-ai.yaml`), and a test fails if a Firefox update adds a new one that is on. Translations stay available: they run on your device and only when you ask.
 
 ### Live Folders
 

@@ -5,14 +5,7 @@ body:
     attributes:
       value: |
         <p align="center">
-          <a href="https://zen-browser.app">
-            <picture>
-              <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/zen-browser/desktop/dev/docs/assets/zen-light.svg">
-              <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/zen-browser/desktop/dev/docs/assets/zen-dark.svg">
-              <img src="https://raw.githubusercontent.com/zen-browser/desktop/dev/docs/assets/zen-light.svg" alt="Zen Logo" width="64" height="64">
-            </picture>
-            <img src="https://raw.githubusercontent.com/zen-browser/desktop/dev/docs/assets/zen-browser.svg" alt="Zen Browser Text" width="156" height="64">
-          </a>
+          <img src="https://raw.githubusercontent.com/montanari-luca/Peppermint/mine/branding-art/peppermint-full.png" alt="Peppermint" width="96">
         </p>
 
         <p align="center"><em>Thank you for filing a bug report!</em></p>
@@ -20,7 +13,7 @@ body:
         > [!IMPORTANT]
         > - Please provide descriptive titles. Bad titles do more harm than good.
         > - Please search existing issues to avoid creating duplicates.
-        > - For enhancement requests, please use GitHub Discussions.
+        > - For new features, use the Feature request template instead.
         > - Please fill out the template below to the best of your ability.
         > - Please describe the issue as much as possible and provide steps to reproduce it along with visual aids if possible.
   - type: checkboxes
@@ -35,7 +28,7 @@ body:
           required: true
         - label: I am not filing an enhancement request.
           required: true
-        - label: I have checked that this issue cannot be reproduced on Mozilla Firefox.
+        - label: I have checked whether this issue also happens in Mozilla Firefox (say so below if it does).
           required: true
         - label: I have checked that this issue can be reproduced once I removed all my Mods and Custom CSS.
           required: true
@@ -78,8 +71,8 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version of our software are you running? Please do not use "latest" or "newest" as version numbers. Go to `Help -> About Zen` to find the version number.
-      placeholder: 1.0.0b
+      description: Which Peppermint version are you running? Please do not write "latest". Go to `Help -> About Peppermint` to find the version number.
+      placeholder: 2026.0.4
     validations:
       required: true
   - type: dropdown
@@ -88,10 +81,8 @@ body:
       label: What platform are you seeing the problem on?
       multiple: true
       options:
-        - Linux (AppImage)
-        - Linux (Flatpak)
         - Linux (Tarball)
-        - macOS - aarch64
+        - macOS - Apple silicon
         - macOS - Intel
         - Windows - aarch64
         - Windows - x64
@@ -124,9 +115,16 @@ body:
         - Tabs
         - URL Bar
         - Workspaces
+        - Peppermint feature (notes, vault, reader, tab archive, ...)
+        - Updates
     validations:
       required: true
 
+  - type: textarea
+    id: startup-report
+    attributes:
+      label: about:report and about:support
+      description: If the problem is about speed or startup, paste the Startup doctor section of `about:report`. For other problems, `about:support` (Copy text to clipboard) helps.
   - type: textarea
     id: logs
     attributes:

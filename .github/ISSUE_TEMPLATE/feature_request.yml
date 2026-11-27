@@ -1,0 +1,45 @@
+name: Feature Request
+description: Suggest a feature or an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Peppermint focuses on calm, everyday productivity, and has no AI features by design.
+
+        > [!IMPORTANT]
+        > - Please search existing issues and discussions first.
+        > - One feature per request, with a descriptive title.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The problem or the situation, not the solution yet. What gets in your way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+      description: How you picture the feature working. Screenshots or mockups are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: elsewhere
+    attributes:
+      label: Seen it elsewhere?
+      description: If another browser or app does this well, which one and how.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Tabs, spaces and split view
+        - Address bar and command palette
+        - Notes, reader and library
+        - Privacy and security
+        - Performance and battery
+        - Settings and appearance
+        - Other
+    validations:
+      required: true

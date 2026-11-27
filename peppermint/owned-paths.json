@@ -28,7 +28,10 @@
     "surfer.json"
   ],
   "ours": [
-    "configs/branding/"
+    "configs/branding/",
+    "CODEOWNERS",
+    "SECURITY.md",
+    ".github/ISSUE_TEMPLATE/"
   ],
   "deleted": [
     ".github/workflows/check-candidate-release.yml",

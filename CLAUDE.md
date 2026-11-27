@@ -23,6 +23,7 @@ Never edit a file that exists in zen-browser/desktop (except the paths in `peppe
 - Change to an existing Zen or Firefox file: edit it under `engine/`, then `npm run pm:record -- <engine path> <feature>`. This writes `peppermint/patches/<feature>/<path>.patch` (binaries go to `peppermint/files/`) and restores Zen's copy. Never commit such an edit in `src/`.
 - Brand assets: `configs/branding/`. Brand identity fields: `peppermint/identity.json`.
 - Do not rename internal `gZen*`, `zen.*` or `nsZen*` names; only user-visible brand text changes.
+- No AI features: a new Firefox AI pref that defaults to on goes off in `prefs/peppermint/no-ai.yaml` (the `privacy_defaults` test fails until it does).
 
 ## Branches and upstream merges
 
@@ -31,6 +32,8 @@ Never edit a file that exists in zen-browser/desktop (except the paths in `peppe
 - Merge sync PRs with a merge commit, never squash or rebase.
 - A failed overlay patch in a sync PR means Zen changed lines Peppermint edits: fix the file under `engine/`, run `pm:record`, push to the sync branch.
 - Patches in `peppermint/compat-patches.txt` are Zen patches rewritten by `npm run import` for the pinned Firefox. After a merge, take Zen's copy and re-run the import.
+- Releases come only from `.github/workflows/peppermint-release.yml` (see `peppermint/RELEASING.md`), never from a local build.
+- CI: `peppermint-checks.yml` on every push (suites listed in `moz.build`, `node --test "peppermint/scripts/tests/*.test.mjs"`, workflow lint), `peppermint-tests.yml` nightly. Keep both green.
 
 ## Working rules
 
