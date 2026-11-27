@@ -4,6 +4,7 @@
 
 MOZ_SRC_FILES += [
     "PeppermintAboutUpdater.sys.mjs",
+    "PeppermintUpdateKeys.sys.mjs",
     "PeppermintUpdater.sys.mjs",
     "PeppermintUpdaterUI.sys.mjs",
 ]

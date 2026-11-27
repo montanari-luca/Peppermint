@@ -3,10 +3,16 @@
 
 "use strict";
 
-const { PeppermintUpdater, UpdateStatus, isNewerVersion, pickRelease } =
-  ChromeUtils.importESModule(
-    "moz-src:///peppermint/updater/PeppermintUpdater.sys.mjs"
-  );
+const {
+  PeppermintUpdater,
+  UpdateStatus,
+  isNewerVersion,
+  pickRelease,
+  signatureUrlFor,
+  verifyManifest,
+} = ChromeUtils.importESModule(
+  "moz-src:///peppermint/updater/PeppermintUpdater.sys.mjs"
+);
 
 const URLS = {
   macos: "https://example.com/Peppermint.dmg",
@@ -14,21 +20,77 @@ const URLS = {
   linux: "https://example.com/peppermint.tar.xz",
 };
 
+// The tests sign every manifest with their own key pair, which the updater
+// trusts for the duration of the test.
+let signingKey;
+let publicKey;
+
+function toBase64(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+}
+
+async function makeKeyPair() {
+  const pair = await crypto.subtle.generateKey({ name: "Ed25519" }, true, [
+    "sign",
+    "verify",
+  ]);
+  return {
+    privateKey: pair.privateKey,
+    publicKey: toBase64(await crypto.subtle.exportKey("raw", pair.publicKey)),
+  };
+}
+
+async function sign(text, key = signingKey) {
+  return toBase64(
+    await crypto.subtle.sign(
+      { name: "Ed25519" },
+      key,
+      new TextEncoder().encode(text)
+    )
+  );
+}
+
 add_setup(async function () {
+  ({ privateKey: signingKey, publicKey } = await makeKeyPair());
+  PeppermintUpdater.setTrustedKeysForTesting([publicKey]);
+  registerCleanupFunction(() =>
+    PeppermintUpdater.setTrustedKeysForTesting(null)
+  );
   // Let the window finish its start-up animations first.
   await new Promise(resolve => setTimeout(resolve, 500));
 });
 
-function manifestUrl(manifest) {
-  return `data:application/json,${encodeURIComponent(JSON.stringify(manifest))}`;
-}
-
-async function checkWith(manifest) {
+/**
+ * Serves `text` as the update JSON with `signature` (by default a valid
+ * signature of `text`) and runs a check.
+ */
+async function checkWithText(text, { signature } = {}) {
+  signature ??= await sign(text);
   await SpecialPowers.pushPrefEnv({
-    set: [["peppermint.update.url", manifestUrl(manifest)]],
+    set: [
+      [
+        "peppermint.update.url",
+        `data:application/json,${encodeURIComponent(text)}`,
+      ],
+      [
+        "peppermint.update.signature-url",
+        `data:text/plain,${encodeURIComponent(signature)}`,
+      ],
+    ],
   });
   return PeppermintUpdater.checkNow();
 }
+
+function checkWith(manifest, options) {
+  return checkWithText(JSON.stringify(manifest), options);
+}
+
+// Matches this machine whichever platform the test runs on.
+const ALL_DOWNLOADS = {
+  ...URLS,
+  "windows-arm64": URLS.windows,
+  "linux-aarch64": URLS.linux,
+};
 
 add_task(function test_version_comparison() {
   Assert.ok(isNewerVersion("2026.0.1", "2026.0.2"), "Patch bump is newer");
@@ -177,13 +239,10 @@ add_task(async function test_newer_version_is_offered() {
   const seen = [];
   const observer = (subject, topic, status) => seen.push(status);
   Services.obs.addObserver(observer, "peppermint-update-state");
-  // Match this machine whichever platform the test runs on.
-  const downloads = {
-    ...URLS,
-    "windows-arm64": URLS.windows,
-    "linux-aarch64": URLS.linux,
-  };
-  const state = await checkWith({ latest: "9999.0.0", downloads });
+  const state = await checkWith({
+    latest: "9999.0.0",
+    downloads: ALL_DOWNLOADS,
+  });
   Services.obs.removeObserver(observer, "peppermint-update-state");
   Assert.equal(state.status, UpdateStatus.MANUAL, "Auto download is off");
   Assert.equal(state.version, "9999.0.0");
@@ -196,11 +255,128 @@ add_task(async function test_newer_version_is_offered() {
 });
 
 add_task(async function test_bad_manifest() {
-  await SpecialPowers.pushPrefEnv({
-    set: [["peppermint.update.url", "data:application/json,not-json"]],
-  });
-  const state = await PeppermintUpdater.checkNow();
+  const state = await checkWithText("not-json");
   Assert.equal(state.status, UpdateStatus.FAILED, "Junk is a failed check");
+});
+
+add_task(async function test_signature_helpers() {
+  const text = JSON.stringify({ latest: "9999.0.0", downloads: URLS });
+  const bytes = new TextEncoder().encode(text);
+  const signature = await sign(text);
+  Assert.ok(
+    await verifyManifest(bytes, signature, [publicKey]),
+    "A valid signature is accepted"
+  );
+  Assert.ok(
+    await verifyManifest(bytes, `${signature}\n`, [publicKey]),
+    "A trailing newline in the .sig file is fine"
+  );
+  const other = await makeKeyPair();
+  Assert.ok(
+    await verifyManifest(bytes, signature, [other.publicKey, publicKey]),
+    "Any trusted key may sign (key rotation)"
+  );
+  Assert.ok(
+    !(await verifyManifest(bytes, signature, [other.publicKey])),
+    "A signature by an untrusted key is refused"
+  );
+  Assert.ok(
+    !(await verifyManifest(
+      new TextEncoder().encode(text.replace("9999", "9998")),
+      signature,
+      [publicKey]
+    )),
+    "A changed manifest is refused"
+  );
+  Assert.ok(
+    !(await verifyManifest(bytes, signature, [])),
+    "Nothing is verified without keys"
+  );
+  for (const junk of [null, "", "not base64!", btoa("short")]) {
+    Assert.ok(
+      !(await verifyManifest(bytes, junk, [publicKey])),
+      `A malformed signature is refused (${junk})`
+    );
+  }
+  Assert.ok(
+    !(await verifyManifest(bytes, signature, ["bm90IGEga2V5"])),
+    "A malformed key is skipped"
+  );
+
+  Assert.equal(
+    signatureUrlFor("https://example.com/a/peppermint.json?ref=main", ""),
+    "https://example.com/a/peppermint.json.sig?ref=main",
+    "The signature sits next to the manifest"
+  );
+  Assert.equal(
+    signatureUrlFor("https://example.com/peppermint.json", "https://x.test/s"),
+    "https://x.test/s",
+    "The pref overrides the location"
+  );
+});
+
+add_task(async function test_tampered_manifest_is_refused() {
+  const signed = JSON.stringify({
+    latest: "9999.0.0",
+    downloads: ALL_DOWNLOADS,
+  });
+  const state = await checkWithText(signed.replace("9999", "9998"), {
+    signature: await sign(signed),
+  });
+  Assert.equal(state.status, UpdateStatus.FAILED, "The check fails");
+  Assert.equal(state.error, "The update information is not signed");
+});
+
+add_task(async function test_unsigned_manifest_is_refused() {
+  const state = await checkWith(
+    { latest: "9999.0.0", downloads: ALL_DOWNLOADS },
+    { signature: "" }
+  );
+  Assert.equal(state.status, UpdateStatus.FAILED, "No signature, no update");
+});
+
+add_task(async function test_foreign_key_is_refused() {
+  const other = await makeKeyPair();
+  const text = JSON.stringify({ latest: "9999.0.0", downloads: ALL_DOWNLOADS });
+  const state = await checkWithText(text, {
+    signature: await sign(text, other.privateKey),
+  });
+  Assert.equal(state.status, UpdateStatus.FAILED, "Only trusted keys count");
+});
+
+add_task(async function test_self_install_needs_signature_and_checksum() {
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      ["peppermint.update.auto-download", true],
+      ["peppermint.update.allow-dev-install", true],
+    ],
+  });
+  const sha256 = Object.fromEntries(
+    Object.keys(ALL_DOWNLOADS).map(key => [key, "a".repeat(64)])
+  );
+
+  let state = await checkWith({ latest: "9999.0.0", downloads: ALL_DOWNLOADS });
+  Assert.equal(
+    state.status,
+    UpdateStatus.MANUAL,
+    "A signed manifest without a checksum only links to the download"
+  );
+  Assert.equal(state.progress, 0, "Nothing was downloaded");
+
+  PeppermintUpdater.setTrustedKeysForTesting([]);
+  state = await checkWith(
+    { latest: "9999.0.0", downloads: ALL_DOWNLOADS, sha256 },
+    { signature: "" }
+  );
+  Assert.equal(
+    state.status,
+    UpdateStatus.MANUAL,
+    "A build without keys only links to the download"
+  );
+  Assert.equal(state.progress, 0, "Nothing was downloaded");
+  PeppermintUpdater.setTrustedKeysForTesting([publicKey]);
+
+  await SpecialPowers.popPrefEnv();
 });
 
 add_task(async function test_about_dialog() {

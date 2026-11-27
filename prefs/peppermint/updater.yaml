@@ -10,6 +10,11 @@
 - name: peppermint.update.url
   value: "https://raw.githubusercontent.com/montanari-luca/MintFlow-Releases/refs/heads/main/peppermint.json"
 
+# Ed25519 signature of that JSON. Empty means the JSON's own address with
+# ".sig" added to its path.
+- name: peppermint.update.signature-url
+  value: ""
+
 # Seconds between checks while the browser stays open (minimum 600).
 - name: peppermint.update.interval-seconds
   value: 21600

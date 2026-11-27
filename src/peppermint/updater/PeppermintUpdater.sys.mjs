@@ -19,12 +19,19 @@
  * The website's download ids ("macos-universal", "windows-x64",
  * "linux-x64", "linux-arm64") are read too, so one JSON serves both.
  *
+ * The JSON is signed: "<url>.sig" holds a base64 Ed25519 signature of its
+ * exact bytes by one of the keys in PeppermintUpdateKeys.sys.mjs. An update
+ * only installs itself when the signature is valid and the JSON carries the
+ * file's checksum, so the signature covers the installer too. A build
+ * without keys only links to the download.
+ *
  * The state is exposed through PeppermintUpdater.state and announced with the
  * "peppermint-update-state" observer topic, so the sidebar notification and
  * the About dialog never keep a second copy of it.
  */
 
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+import { UPDATE_PUBLIC_KEYS } from "moz-src:///peppermint/updater/PeppermintUpdateKeys.sys.mjs";
 
 const lazy = {};
 
@@ -39,6 +46,7 @@ export const UPDATE_STATE_TOPIC = "peppermint-update-state";
 
 const PREF_ENABLED = "peppermint.update.enabled";
 const PREF_URL = "peppermint.update.url";
+const PREF_SIGNATURE_URL = "peppermint.update.signature-url";
 const PREF_INTERVAL = "peppermint.update.interval-seconds";
 const PREF_AUTO_DOWNLOAD = "peppermint.update.auto-download";
 const PREF_ALLOW_DEV_INSTALL = "peppermint.update.allow-dev-install";
@@ -72,7 +80,90 @@ const Status = Object.freeze({
 
 export const UpdateStatus = Status;
 
+/** The update information is unsigned, or its signature does not match. */
+class UnsignedManifestError extends Error {
+  constructor() {
+    super("The update information is not signed");
+    this.name = "UnsignedManifestError";
+  }
+}
+
 // Pure helpers. They are exported for the tests.
+
+function base64ToBytes(text) {
+  return Uint8Array.from(atob(text.replace(/\s+/g, "")), c => c.charCodeAt(0));
+}
+
+/**
+ * True when `signature` is a valid Ed25519 signature of `bytes` by one of
+ * `keys`.
+ *
+ * @param {ArrayBuffer|Uint8Array} bytes - The update JSON, exactly as served.
+ * @param {*} signature - Base64 signature (the .sig file's text).
+ * @param {string[]} [keys] - Base64 raw public keys.
+ * @returns {Promise<boolean>}
+ */
+export async function verifyManifest(
+  bytes,
+  signature,
+  keys = UPDATE_PUBLIC_KEYS
+) {
+  if (typeof signature != "string" || !keys.length) {
+    return false;
+  }
+  let sig;
+  try {
+    sig = base64ToBytes(signature);
+  } catch (e) {
+    return false;
+  }
+  if (sig.length != 64) {
+    return false;
+  }
+  for (const key of keys) {
+    try {
+      const raw = base64ToBytes(key);
+      if (raw.length != 32) {
+        continue;
+      }
+      const publicKey = await crypto.subtle.importKey(
+        "raw",
+        raw,
+        { name: "Ed25519" },
+        false,
+        ["verify"]
+      );
+      if (
+        await crypto.subtle.verify({ name: "Ed25519" }, publicKey, sig, bytes)
+      ) {
+        return true;
+      }
+    } catch (e) {
+      console.error("Peppermint update key could not be used", e);
+    }
+  }
+  return false;
+}
+
+/**
+ * Where the signature of the update JSON lives: the signature-url pref, or
+ * the JSON's own address with ".sig" added to its path.
+ *
+ * @param {string} manifestUrl
+ * @param {string} [override] - The signature-url pref.
+ * @returns {string}
+ */
+export function signatureUrlFor(
+  manifestUrl,
+  override = Services.prefs.getStringPref(PREF_SIGNATURE_URL, "")
+) {
+  if (override) {
+    return override;
+  }
+  const url = new URL(manifestUrl);
+  url.pathname += ".sig";
+  return url.href;
+}
 
 /**
  * True when `latest` is a valid, strictly newer version than `current`.
@@ -217,6 +308,11 @@ class Updater {
   #started = false;
   #busy = null;
   #download = null;
+  #testKeys = null;
+  // The JSON and its signature come from a cache that can briefly serve one
+  // new and one old file. A mismatch is checked again once, soon after.
+  #retrySoon = false;
+  #retriedSoon = false;
 
   get state() {
     return { ...this.#state };
@@ -228,6 +324,22 @@ class Updater {
 
   get enabled() {
     return Services.prefs.getBoolPref(PREF_ENABLED, true);
+  }
+
+  get #keys() {
+    return this.#testKeys ?? UPDATE_PUBLIC_KEYS;
+  }
+
+  /**
+   * Replaces the trusted keys. Only for tests.
+   *
+   * @param {string[]|null} keys - Base64 raw public keys, or null to reset.
+   */
+  setTrustedKeysForTesting(keys) {
+    if (!Cu.isInAutomation) {
+      throw new Error("Update keys can only be replaced in tests");
+    }
+    this.#testKeys = keys;
   }
 
   /** Starts the check schedule. Safe to call from every window. */
@@ -280,7 +392,13 @@ class Updater {
     lazy.clearTimeout(this.#timer);
     this.#timer = lazy.setTimeout(async () => {
       await this.checkNow();
-      this.#scheduleCheck(this.#intervalMs);
+      let next = this.#intervalMs;
+      if (this.#retrySoon) {
+        this.#retrySoon = false;
+        this.#retriedSoon = true;
+        next = MIN_INTERVAL_SECONDS * 1000;
+      }
+      this.#scheduleCheck(next);
     }, delayMs);
   }
 
@@ -289,21 +407,43 @@ class Updater {
     Services.obs.notifyObservers(null, UPDATE_STATE_TOPIC, this.#state.status);
   }
 
-  async #fetchManifest() {
+  async #fetch(url, type) {
     const controller = new AbortController();
     const timeout = lazy.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-      const response = await fetch(Services.prefs.getStringPref(PREF_URL), {
+      const response = await fetch(url, {
         cache: "no-store",
         signal: controller.signal,
       });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      return await response.json();
+      return await response[type]();
     } finally {
       lazy.clearTimeout(timeout);
     }
+  }
+
+  /**
+   * The update JSON, and whether its signature is valid. With trusted keys,
+   * anything not signed by one of them is refused outright.
+   *
+   * @returns {Promise<{json: object, verified: boolean}>}
+   */
+  async #fetchManifest() {
+    const url = Services.prefs.getStringPref(PREF_URL);
+    const keys = this.#keys;
+    const [bytes, signature] = await Promise.all([
+      this.#fetch(url, "arrayBuffer"),
+      keys.length
+        ? this.#fetch(signatureUrlFor(url), "text").catch(() => null)
+        : null,
+    ]);
+    const verified = await verifyManifest(bytes, signature, keys);
+    if (keys.length && !verified) {
+      throw new UnsignedManifestError();
+    }
+    return { json: JSON.parse(new TextDecoder().decode(bytes)), verified };
   }
 
   async #check() {
@@ -313,7 +453,8 @@ class Updater {
     const previous = this.#state;
     this.#set({ status: Status.CHECKING });
     try {
-      const json = await this.#fetchManifest();
+      const { json, verified } = await this.#fetchManifest();
+      this.#retriedSoon = false;
       Services.prefs.setIntPref(PREF_LAST_CHECK, Math.floor(Date.now() / 1000));
       if (!isNewerVersion(this.currentVersion, json?.latest)) {
         await this.#discardStaged();
@@ -334,8 +475,11 @@ class Updater {
         return this.state;
       }
       await this.#discardStaged();
-      await this.#prepare(release);
+      await this.#prepare({ ...release, verified });
     } catch (error) {
+      if (error instanceof UnsignedManifestError && !this.#retriedSoon) {
+        this.#retrySoon = true;
+      }
       console.error("Peppermint update check failed", error);
       this.#set({
         status: Status.FAILED,
@@ -347,6 +491,10 @@ class Updater {
 
   // True when this install may replace itself.
   #canSelfInstall(release) {
+    // Only a signed JSON with the file's checksum vouches for the installer.
+    if (!release.verified || !release.sha256) {
+      return false;
+    }
     const wanted = INSTALLABLE_EXTENSION[AppConstants.platform];
     if (!wanted || fileExtensionOf(release.url) != wanted) {
       return false;
@@ -449,11 +597,9 @@ class Updater {
       this.#download = null;
     }
 
-    if (release.sha256) {
-      const actual = await IOUtils.computeHexDigest(target, "sha256");
-      if (actual.toLowerCase() != release.sha256) {
-        throw new Error("The downloaded file does not match its checksum");
-      }
+    const actual = await IOUtils.computeHexDigest(target, "sha256");
+    if (!release.sha256 || actual.toLowerCase() != release.sha256) {
+      throw new Error("The downloaded file does not match its checksum");
     }
 
     switch (AppConstants.platform) {

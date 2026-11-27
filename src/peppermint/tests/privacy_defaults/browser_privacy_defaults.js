@@ -49,6 +49,49 @@ add_task(async function test_resource_defaults() {
   );
 });
 
+// No AI (prefs/peppermint/no-ai.yaml and Zen's prefs/firefox/ai.yaml). Every
+// boolean in Firefox's AI namespaces must default to off, so a merge that adds
+// a new AI feature fails here until it is turned off.
+const AI_PREF = new RegExp(
+  "^(browser\\.ml\\.|browser\\.smartwindow\\.|browser\\.aiwindow\\.|" +
+    "browser\\.genai\\.|browser\\.tabs\\.groups\\.smart\\.|" +
+    "places\\.semanticHistory\\.|extensions\\.ml\\.|" +
+    "browser\\.search\\.visualSearch\\.)|(^|\\.)(genai|llm|chatbot)(\\.|$)"
+);
+// On, but they only tune a feature that is off.
+const AI_SETTINGS_ALLOWED_ON = new Set([
+  "browser.ml.chat.hideLocalhost",
+  "browser.ml.checkForMemory",
+  "browser.ml.linkPreview.blockListEnabled",
+  "browser.ml.linkPreview.longPress",
+  "browser.ml.llama.hwInference",
+  "browser.smartwindow.aitab.menus",
+  "browser.smartwindow.searchTheWebFast",
+  "browser.smartwindow.showThemesNotice",
+  "browser.smartwindow.sidebar.openByDefault",
+]);
+
+add_task(async function test_no_ai() {
+  const defaults = Services.prefs.getDefaultBranch("");
+  for (const pref of ["browser.ml.enable", "browser.smartwindow.enabled"]) {
+    Assert.ok(!defaults.getBoolPref(pref), `${pref} is off`);
+  }
+  const switchedOn = defaults
+    .getChildList("")
+    .filter(
+      pref =>
+        AI_PREF.test(pref) &&
+        !AI_SETTINGS_ALLOWED_ON.has(pref) &&
+        defaults.getPrefType(pref) == Ci.nsIPrefBranch.PREF_BOOL &&
+        defaults.getBoolPref(pref)
+    );
+  Assert.deepEqual(
+    switchedOn,
+    [],
+    "No AI feature is on by default (turn new ones off in prefs/peppermint/no-ai.yaml)"
+  );
+});
+
 add_task(async function test_tracking_protection_stays_standard() {
   const { ContentBlockingPrefs } = ChromeUtils.importESModule(
     "moz-src:///browser/components/protections/ContentBlockingPrefs.sys.mjs"
