@@ -676,3 +676,12 @@ peppermint-shortcut-new-folder = New Folder
 peppermint-shortcut-new-live-folder = New Live Folder
 peppermint-shortcut-edit-pinned-url = Edit Pinned Tab Address
 peppermint-shortcut-tabs-on-right = Toggle Tabs on the Right
+
+# Zen's translations of these headers still fit Peppermint's shorter English
+# text, so translated builds keep them (see peppermint/scripts/peppermint_l10n.py).
+# peppermint: keep-translations zen-glance-header
+# peppermint: keep-translations zen-pinned-tab-manager-header
+# peppermint: keep-translations zen-settings-workspaces-header
+# peppermint: keep-translations zen-vertical-tabs-title
+# peppermint: keep-translations zen-vertical-tabs-header
+# peppermint: keep-translations pane-zen-CKS-title

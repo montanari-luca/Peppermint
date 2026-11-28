@@ -38,6 +38,9 @@ jobs:
       - name: Test suites are registered
         run: node peppermint/scripts/ci-tests.mjs --check
 
+      - name: Strings
+        run: node peppermint/scripts/l10n-check.mjs
+
       - name: Script tests
         run: node --test "peppermint/scripts/tests/*.test.mjs"
 
