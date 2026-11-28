@@ -22,3 +22,5 @@ prefs = [
 ["browser_delete.js"]
 
 ["browser_private_window.js"]
+
+["browser_chromium_spaces.js"]

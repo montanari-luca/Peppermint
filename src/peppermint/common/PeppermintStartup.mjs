@@ -314,6 +314,17 @@ const FEATURES = [
         "moz-src:///peppermint/isolated-spaces/PeppermintIsolatedSpacesWindow.sys.mjs"
       ).PeppermintIsolatedSpacesWindow.prune(win),
   },
+  // Imports from Chromium browsers turn each profile into an isolated space.
+  {
+    name: "Chromium profiles as spaces",
+    phase: IDLE,
+    prefs: ["peppermint.spaces.import-profiles-as-spaces"],
+    when: () => boolPref("peppermint.spaces.import-profiles-as-spaces", true),
+    run: () =>
+      load(
+        "moz-src:///peppermint/isolated-spaces/PeppermintChromiumSpaces.sys.mjs"
+      ).PeppermintChromiumSpaces.install(),
+  },
   {
     name: "Live folders idle",
     phase: IDLE,
