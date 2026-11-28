@@ -20,6 +20,7 @@ Never edit a file that exists in zen-browser/desktop (except the paths in `peppe
 - Tests: `src/peppermint/tests/<suite>/`, listed in `src/peppermint/tests/moz.build`.
 - New pref: `prefs/peppermint/additions.yaml`. Changed default of a Zen or Firefox pref: same `name` (and `condition`) in `prefs/peppermint/overrides.yaml`. Never edit `prefs/zen/` or `prefs/firefox/`.
 - Strings: `peppermint/locales/en-US/browser/...`, mirroring the path under `locales/en-US/browser/`; a message with the same id replaces Zen's. Never edit `locales/`. User-visible "Zen" text is rebranded by `peppermint/l10n-rebrand.json`.
+- Translations of Peppermint's strings: `peppermint/locales/<lang>/`, synced with Crowdin by `peppermint-l10n.yml` (see `peppermint/TRANSLATING.md`), never by hand in `locales/`. Never reuse a string id for a new meaning; `node peppermint/scripts/l10n-check.mjs` must pass.
 - Change to an existing Zen or Firefox file: edit it under `engine/`, then `npm run pm:record -- <engine path> <feature>`. This writes `peppermint/patches/<feature>/<path>.patch` (binaries go to `peppermint/files/`) and restores Zen's copy. Never commit such an edit in `src/`.
 - Brand assets: `configs/branding/`. Brand identity fields: `peppermint/identity.json`.
 - Do not rename internal `gZen*`, `zen.*` or `nsZen*` names; only user-visible brand text changes.

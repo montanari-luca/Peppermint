@@ -157,6 +157,8 @@ npm start
 
 GitHub Actions builds, tests and publishes releases for Windows, macOS (universal) and Linux; see [peppermint/RELEASING.md](peppermint/RELEASING.md). The browser tests run nightly, and Zen is merged in daily through a pull request (`sync-zen-firefox.yml`).
 
+To translate Peppermint, see [peppermint/TRANSLATING.md](peppermint/TRANSLATING.md).
+
 ---
 
 ### Key Technologies

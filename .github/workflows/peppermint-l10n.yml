@@ -1,0 +1,65 @@
+# Keeps Peppermint's strings in its Crowdin project (peppermint/crowdin.yml):
+# English changes on mine are uploaded, and translations come back as a pull
+# request from l10n/crowdin into mine, checked like any other change.
+#
+# Needs the CROWDIN_PROJECT_ID and CROWDIN_PERSONAL_TOKEN secrets (see
+# peppermint/TRANSLATING.md), and SYNC_TOKEN so the pull request gets checks.
+# Without them the run only says what is missing.
+name: Peppermint translations
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - mine
+    paths:
+      - "peppermint/locales/en-US/**"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: peppermint-l10n
+  cancel-in-progress: false
+
+jobs:
+  crowdin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      HAS_CROWDIN: ${{ secrets.CROWDIN_PROJECT_ID != '' && secrets.CROWDIN_PERSONAL_TOKEN != '' }}
+      DOWNLOAD: ${{ github.event_name != 'push' }}
+    steps:
+      - name: Explain missing secrets
+        if: env.HAS_CROWDIN != 'true'
+        run: echo "::notice::Set CROWDIN_PROJECT_ID and CROWDIN_PERSONAL_TOKEN to sync translations (see peppermint/TRANSLATING.md)."
+
+      - name: Checkout repository
+        if: env.HAS_CROWDIN == 'true'
+        uses: actions/checkout@v4
+
+      - name: Upload English, download translations
+        if: env.HAS_CROWDIN == 'true'
+        # v2.9.1
+        uses: crowdin/github-action@590c05e09a29f392b203faf4d6aa8e0cd32c7835
+        with:
+          config: peppermint/crowdin.yml
+          upload_sources: true
+          upload_translations: false
+          download_translations: ${{ env.DOWNLOAD }}
+          skip_untranslated_strings: true
+          localization_branch_name: l10n/crowdin
+          create_pull_request: true
+          pull_request_title: "Update Peppermint translations"
+          pull_request_body: "Translations from Crowdin. `peppermint-checks` verifies them against English (ids, variables, languages)."
+          pull_request_base_branch_name: mine
+          commit_message: "Update Peppermint translations from Crowdin"
+        env:
+          GITHUB_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}

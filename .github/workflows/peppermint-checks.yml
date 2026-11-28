@@ -53,6 +53,7 @@ jobs:
             .github/workflows/npm-audit-weekly.yml
             .github/workflows/peppermint-checks.yml
             .github/workflows/peppermint-linux-build.yml
+            .github/workflows/peppermint-l10n.yml
             .github/workflows/peppermint-macos-build.yml
             .github/workflows/peppermint-release.yml
             .github/workflows/peppermint-tests.yml
