@@ -1,6 +1,21 @@
 --- a/zen/spaces/ZenSpaceCreation.mjs
 +++ b/zen/spaces/ZenSpaceCreation.mjs
-@@ -97,6 +97,9 @@
+@@ -14,6 +14,14 @@
+   { global: "current" }
+ );
+ 
++ChromeUtils.defineESModuleGetters(lazy, {
++  PeppermintIsolatedSpaces:
++    "moz-src:///peppermint/isolated-spaces/PeppermintIsolatedSpaces.sys.mjs",
++});
++
++// The profile choice that keeps the container made for this space alone.
++const OWN_CONTAINER = -1;
++
+ class nsZenWorkspaceCreation extends MozXULElement {
+   #wasInCollapsedMode = false;
+   #urlbarDimmed = false;
+@@ -97,6 +105,9 @@
    }
  
    get #spaceSwitchDuration() {
@@ -10,3 +25,68 @@
      return (
        Services.prefs.getIntPref("zen.workspaces.switch-animation-duration") /
        1000
+@@ -262,10 +273,17 @@
+         this.onProfilePopupCommand.bind(this)
+       );
+ 
+-      this.currentProfile = {
+-        id: 0,
+-        name: lazy.l10n.formatValueSync("zen-workspace-default-profile"),
+-      };
++      this.currentProfile = lazy.PeppermintIsolatedSpaces.isIsolated(
++        gZenWorkspaces.getWorkspaceFromId(this.workspaceId)
++      )
++        ? {
++            id: OWN_CONTAINER,
++            name: lazy.l10n.formatValueSync("peppermint-space-own-container"),
++          }
++        : {
++            id: 0,
++            name: lazy.l10n.formatValueSync("zen-workspace-default-profile"),
++          };
+     } else {
+       this.inputProfile.parentNode.hidden = true;
+     }
+@@ -291,8 +309,23 @@
+     const workspace = gZenWorkspaces.getActiveWorkspace();
+     workspace.name = this.inputName.value.trim();
+     workspace.icon = this.inputIcon.image || this.inputIcon.label || undefined;
+-    workspace.containerTabId = this.currentProfile ?? 0;
++    // An isolated new space keeps the container made for it, unless another
++    // profile was picked.
++    const profile = this.currentProfile;
++    const keepsOwnContainer =
++      profile === OWN_CONTAINER ||
++      (profile === undefined &&
++        lazy.PeppermintIsolatedSpaces.isIsolated(workspace));
++    if (!keepsOwnContainer) {
++      workspace.containerTabId = profile ?? 0;
++    }
+     await gZenWorkspaces.saveWorkspace(workspace);
++    if (!keepsOwnContainer) {
++      // The container made for the space is no longer used.
++      lazy.PeppermintIsolatedSpaces.prune(gZenWorkspaces.getWorkspaces()).catch(
++        console.error
++      );
++    }
+ 
+     await this.#cleanup();
+ 
+@@ -346,6 +379,17 @@
+       showManageContainers: false,
+     });
+ 
++    if (
++      lazy.PeppermintIsolatedSpaces.isIsolated(
++        gZenWorkspaces.getWorkspaceFromId(this.workspaceId)
++      )
++    ) {
++      const own = document.createXULElement("menuitem");
++      own.setAttribute("data-usercontextid", String(OWN_CONTAINER));
++      own.label = lazy.l10n.formatValueSync("peppermint-space-own-container");
++      event.target.prepend(own);
++    }
++
+     const defaultItem = event.target.querySelector('[data-usercontextid="0"]');
+     if (defaultItem) {
+       defaultItem.removeAttribute("data-l10n-id");

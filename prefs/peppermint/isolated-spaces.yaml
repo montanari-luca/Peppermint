@@ -1,0 +1,29 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Isolated spaces (src/peppermint/isolated-spaces): an isolated space has a
+# container of its own, so its cookies, logins and site data never reach
+# another space.
+
+# Every new space gets its own container. Existing spaces are isolated one by
+# one from the space menu.
+- name: peppermint.spaces.isolate-new
+  value: true
+
+# Import each profile of a Chromium browser (Chrome, Edge, Brave, ...) as an
+# isolated space with its own bookmarks folder.
+- name: peppermint.spaces.import-profiles-as-spaces
+  value: true
+
+# Bookkeeping, not settings: the isolated spaces (space id to container id),
+# the containers Peppermint created (the only ones it ever deletes), and the
+# spaces made from imported profiles.
+- name: peppermint.spaces.isolated
+  value: "{}"
+
+- name: peppermint.spaces.created-containers
+  value: "[]"
+
+- name: peppermint.spaces.imported-profiles
+  value: "{}"

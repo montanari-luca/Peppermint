@@ -1,0 +1,24 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+[DEFAULT]
+support-files = [
+  "head.js",
+]
+prefs = [
+  "privacy.userContext.enabled=true",
+  "peppermint.spaces.isolate-new=true",
+]
+
+["browser_isolation_rules.js"]
+
+["browser_new_space.js"]
+
+["browser_move.js"]
+
+["browser_isolate_existing.js"]
+
+["browser_delete.js"]
+
+["browser_private_window.js"]

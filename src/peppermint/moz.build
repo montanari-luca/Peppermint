@@ -15,6 +15,7 @@ DIRS += [
     "features",
     "ghost-mode",
     "homepage",
+    "isolated-spaces",
     "janitor",
     "library",
     "lookalike",

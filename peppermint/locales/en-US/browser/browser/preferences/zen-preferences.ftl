@@ -513,6 +513,9 @@ peppermint-tabs-confirm-close-middle-click =
 peppermint-tabs-islands =
     .label = Group tabs opened from a tab into an island
 
+peppermint-spaces-isolate-new =
+    .label = Give each new space its own profile (separate cookies and sign-ins)
+
 ## Peppermint features pane. One name, description and keywords message per
 ## entry of src/peppermint/features/PeppermintFeatures.sys.mjs. Keywords are
 ## extra words Settings search matches; they are never shown.
@@ -567,6 +570,10 @@ peppermint-feature-permission-auto-revoke-keywords = camera, microphone, locatio
 peppermint-feature-fingerprinting-protection = Fingerprinting Protection
 peppermint-feature-fingerprinting-protection-description = Makes it harder for sites to recognize your device without cookies.
 peppermint-feature-fingerprinting-protection-keywords = fingerprint, tracking, canvas, identify
+
+peppermint-feature-isolated-spaces = Isolated Spaces
+peppermint-feature-isolated-spaces-description = Each new space gets its own profile, so its cookies and sign-ins never reach your other spaces.
+peppermint-feature-isolated-spaces-keywords = container, profile, cookies, sign in, separate, work, personal
 
 peppermint-feature-ghost-mode = Ghost Mode
 peppermint-feature-ghost-mode-description = Private windows that leave no history and can delete their downloads.

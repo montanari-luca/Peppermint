@@ -30,7 +30,7 @@
 // Raise this when a release adds features, and give those features
 // `added: GENERATION`. The feature tour then announces them once, and the
 // features pane marks them "New" until it has been opened.
-export const GENERATION = 2;
+export const GENERATION = 3;
 
 export const CATEGORIES = ["privacy", "tabs", "address-bar", "tools", "system"];
 
@@ -94,6 +94,15 @@ export const FEATURES = [
     icon: "tracking-protection.svg",
     pref: "privacy.fingerprintingProtection",
     added: 2,
+  },
+  {
+    id: "isolated-spaces",
+    category: "privacy",
+    icon: "permissions.svg",
+    pref: "peppermint.spaces.isolate-new",
+    pane: "paneZenSpacesTabs",
+    startup: "Isolated spaces",
+    added: 3,
   },
   {
     id: "ghost-mode",

@@ -8,11 +8,13 @@
  import { ZenSpacesSwipe } from "resource:///modules/zen/ZenSpacesSwipe.mjs";
  
  const lazy = {};
-@@ -13,11 +12,18 @@
+@@ -13,11 +12,20 @@
    ZenKeyboardShortcuts:
      "resource:///modules/zen/kbs/ZenKeyboardShortcuts.sys.mjs",
    ZenSessionStore: "resource:///modules/zen/ZenSessionManager.sys.mjs",
 +  ZenHomepage: "resource:///modules/zen/homepage/ZenHomepage.sys.mjs",
++  PeppermintIsolatedSpaces:
++    "moz-src:///peppermint/isolated-spaces/PeppermintIsolatedSpaces.sys.mjs",
  });
  
 +// The theme picker closes over the browser window. Loading it from the shared
@@ -28,7 +30,7 @@
    { global: "current" }
  );
  
-@@ -159,7 +165,7 @@
+@@ -159,7 +167,7 @@
        document.documentElement.setAttribute("zen-private-window", "true");
      }
  
@@ -37,7 +39,7 @@
      window.addEventListener("resize", onWindowResize);
      window.addEventListener(
        "unload",
-@@ -255,11 +261,10 @@
+@@ -255,11 +263,10 @@
          return this._emptyTab;
        }
  
@@ -52,21 +54,21 @@
        let tab = gZenUIManager.openAndChangeToTab(newTabUrl);
  
        // Set workspace ID if available
-@@ -324,6 +329,13 @@
-   get tabboxChildrenWithoutEmpty() {
-     return this.tabboxChildren.filter(
-       child => !child.hasAttribute("zen-empty-tab")
-+    );
-+  }
-+
+@@ -327,6 +334,13 @@
+     );
+   }
+ 
 +  get spaceSwitchAnimationEnabled() {
 +    return (
 +      !gReduceMotion &&
 +      Services.prefs.getBoolPref("zen.workspaces.switch-animation", true)
-     );
++    );
++  }
++
+   get shouldAnimateEssentials() {
+     return this.containerSpecificEssentials || !!this.creatingWorkspaceId;
    }
- 
-@@ -364,6 +376,7 @@
+@@ -364,6 +378,7 @@
      if (markupTabs.length) {
        gBrowser.tabContainer._invalidateCachedTabs();
      }
@@ -74,7 +76,7 @@
      for (const workspace of workspaces) {
        this.workspaceElement(workspace.uuid)?.checkPinsExistence();
      }
-@@ -498,15 +511,28 @@
+@@ -498,15 +513,28 @@
      workspaceWrapper.checkPinsExistence();
    }
  
@@ -111,7 +113,7 @@
      const getFolderRoot = tab => {
        let root = tab?.group;
        while (root?.group) {
-@@ -514,32 +540,48 @@
+@@ -514,31 +542,47 @@
        }
        return root || tab;
      };
@@ -153,8 +155,8 @@
        } else {
 -        section.insertBefore(tab, section.firstChild);
 +        unpinned.push(node);
-       }
-     }
++      }
++    }
 +    if (removed.size) {
 +      const kept = tabs.filter(tab => !removed.has(tab));
 +      tabs.length = 0;
@@ -171,13 +173,12 @@
 +      const fragment = document.createDocumentFragment();
 +      for (const node of unpinned) {
 +        fragment.appendChild(node);
-+      }
+       }
 +      section.prepend(fragment);
-+    }
+     }
    }
  
-   /** @type {Map<Element, DocumentFragment>|null} */
-@@ -935,7 +977,7 @@
+@@ -935,7 +979,7 @@
      this.activeWorkspace = activeWorkspace?.uuid;
      try {
        if (activeWorkspace) {
@@ -186,7 +187,7 @@
          gZenThemePicker.onWorkspaceChange(activeWorkspace);
        }
      } catch (e) {
-@@ -963,9 +1005,16 @@
+@@ -963,9 +1007,16 @@
      this.#fixTabPositions();
      this.onWindowResize();
  
@@ -204,7 +205,44 @@
      window.addEventListener("TabAddedToEssentials", tabUpdateListener);
      window.addEventListener("TabRemovedFromEssentials", tabUpdateListener);
      window.addEventListener("TabPinned", tabUpdateListener);
-@@ -1908,6 +1957,7 @@
+@@ -1373,6 +1424,12 @@
+   }
+ 
+   #contextMenuData = null;
++
++  /** The space the space menu was opened for. */
++  get contextMenuSpaceId() {
++    return this.#contextMenuData?.workspaceId || this.activeWorkspace;
++  }
++
+   updateWorkspaceActionsMenu(event) {
+     if (event.target.id !== "zenWorkspaceMoreActions") {
+       return;
+@@ -1501,6 +1558,8 @@
+ 
+   removeWorkspace(windowID) {
+     let { promise, resolve } = Promise.withResolvers();
++    const removedContainerId =
++      this.getWorkspaceFromId(windowID)?.containerTabId ?? 0;
+     this.#deleteWorkspaceOwnedTabs(windowID);
+ 
+     let workspacesData = this.getWorkspaces();
+@@ -1517,6 +1576,14 @@
+     );
+     this.#propagateWorkspaceData(workspacesData);
+     gBrowser.tabContainer._invalidateCachedVisibleTabs();
++    if (!this.privateWindowOrDisabled) {
++      // An isolated space's own container, and its site data, go with it.
++      lazy.PeppermintIsolatedSpaces.onSpaceRemoved(
++        windowID,
++        removedContainerId,
++        workspacesData
++      ).catch(console.error);
++    }
+     return promise;
+   }
+ 
+@@ -1908,6 +1975,7 @@
        }
      }
      gBrowser.tabContainer._invalidateCachedTabs();
@@ -212,7 +250,7 @@
      return true;
    }
  
-@@ -2012,7 +2062,10 @@
+@@ -2012,7 +2080,10 @@
    }
  
    _cancelSwipeAnimation() {
@@ -224,7 +262,7 @@
    }
  
    async #performWorkspaceChange(
-@@ -2749,7 +2802,7 @@
+@@ -2749,7 +2820,7 @@
      this.workspaceIcons.activeIndex = workspace.uuid;
      await this.#animateTabs(
        workspace,
@@ -233,7 +271,7 @@
        tabToSelect,
        {
          previousWorkspaceIndex,
-@@ -2774,12 +2827,17 @@
+@@ -2774,12 +2845,17 @@
        }
      }
  
@@ -257,7 +295,7 @@
        this._invalidateBookmarkContainers();
      }
  
-@@ -2907,16 +2965,22 @@
+@@ -2907,16 +2983,22 @@
        let label =
          ContextualIdentityService.getUserContextLabel(containerTabId) ||
          "Default";
@@ -266,13 +304,13 @@
        if (this.isPrivateWindow) {
          icon = "chrome://browser/skin/zen-icons/private-window-small.svg";
        }
-+    }
+     }
 +    let theme = null;
 +    try {
 +      theme = lazy.nsZenThemePicker.getTheme();
 +    } catch (error) {
 +      console.error("gZenWorkspaces: Error reading the default theme", error);
-     }
++    }
      let workspace = {
        uuid: gZenUIManager.generateUuidv4(),
        icon,
@@ -282,7 +320,26 @@
        containerTabId,
      };
      return workspace;
-@@ -3011,14 +3075,21 @@
+@@ -2947,6 +3029,18 @@
+         !child.hasAttribute("zen-essential")
+     );
+     let workspaceData = this.#createWorkspaceData(name, icon, containerTabId);
++    // A new space gets a container of its own (isolated spaces), unless it
++    // was given one that no isolated space owns.
++    const isolated = lazy.PeppermintIsolatedSpaces;
++    if (
++      !this.privateWindowOrDisabled &&
++      isolated.isolateNew &&
++      (!workspaceData.containerTabId ||
++        isolated.ownerOf(workspaceData.containerTabId, this.getWorkspaces()))
++    ) {
++      workspaceData.containerTabId = 0;
++      isolated.isolate(workspaceData, this.getWorkspaces(), { mode: "new" });
++    }
+     if (!dontChange) {
+       this.#prepareNewWorkspace(workspaceData);
+       this.#createWorkspaceTabsSection(workspaceData, extraTabs);
+@@ -3011,13 +3105,20 @@
  
    #allPinnedContainers() {
      const containers = [];
@@ -298,7 +355,7 @@
 +    )?.pinnedTabsContainer;
 +    if (active) {
 +      containers.push(active);
-     }
++    }
 +    const containerId = this.containerSpecificEssentials
 +      ? this.getCurrentSpaceContainerId()
 +      : 0;
@@ -307,11 +364,10 @@
 +    );
 +    if (essentials) {
 +      containers.push(essentials);
-+    }
+     }
      return containers.length ? containers : [this.pinnedTabsContainer];
    }
- 
-@@ -3196,6 +3267,7 @@
+@@ -3196,6 +3297,7 @@
        isEmpty
      );
      document.documentElement.setAttribute("zen-has-empty-tab", isEmpty);
@@ -319,7 +375,59 @@
    }
  
    async onLocationChange(event) {
-@@ -3472,6 +3544,24 @@
+@@ -3297,11 +3399,19 @@
+   async contextDeleteWorkspace() {
+     const workspaceId =
+       this.#contextMenuData?.workspaceId || this.activeWorkspace;
++    const workspace = this.getWorkspaceFromId(workspaceId);
++    // Deleting an isolated space also deletes its container's site data.
++    const deletesData = lazy.PeppermintIsolatedSpaces.deletesDataWith(
++      workspace,
++      this.getWorkspaces()
++    );
+     const [title, body] = await document.l10n.formatValues([
+       { id: "zen-workspaces-delete-workspace-title" },
+       {
+-        id: "zen-workspaces-delete-workspace-body",
+-        args: { name: this.getWorkspaceFromId(workspaceId).name },
++        id: deletesData
++          ? "peppermint-space-delete-isolated-body"
++          : "zen-workspaces-delete-workspace-body",
++        args: { name: workspace.name },
+       },
+     ]);
+     if (Services.prompt.confirm(window, title, body)) {
+@@ -3376,11 +3486,28 @@
+ 
+   // Tab browser utilities
+ 
+-  getContextIdIfNeeded(userContextId, fromExternal, triggeringPrincipal) {
++  getContextIdIfNeeded(
++    userContextId,
++    fromExternal,
++    triggeringPrincipal,
++    targetSpaceId = undefined
++  ) {
+     if (!this.workspaceEnabled) {
+       return [userContextId, false, undefined];
+     }
+ 
++    // An isolated space keeps every tab in its own container.
++    const isolated = lazy.PeppermintIsolatedSpaces.resolveNewTabContainer(
++      this,
++      {
++        userContextId,
++        targetSpaceId,
++      }
++    );
++    if (isolated) {
++      return isolated;
++    }
++
+     if (
+       triggeringPrincipal &&
+       triggeringPrincipal.isAddonOrExpandedAddonPrincipal &&
+@@ -3472,6 +3599,24 @@
    }
  
    // Session restore functions
@@ -344,7 +452,7 @@
    get allStoredTabs() {
      if (this._allStoredTabs) {
        return this._allStoredTabs;
-@@ -3759,6 +3849,7 @@
+@@ -3759,6 +3904,7 @@
          pinnedContainer.insertBefore(tab, pinnedContainer.lastChild);
        }
      }

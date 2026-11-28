@@ -1,6 +1,16 @@
 --- a/browser/components/preferences/zenSpacesTabs.inc.xhtml
 +++ b/browser/components/preferences/zenSpacesTabs.inc.xhtml
-@@ -60,6 +60,17 @@
+@@ -30,6 +30,9 @@
+       <checkbox id="zenPinnedTabContainerSpecificEssentials"
+             data-l10n-id="zen-pinned-tab-manager-container-specific-essentials-enabled"
+             preference="zen.workspaces.separate-essentials"/>
++      <checkbox id="peppermintSpacesIsolateNew"
++            data-l10n-id="peppermint-spaces-isolate-new"
++            preference="peppermint.spaces.isolate-new"/>
+ 
+       <html:div data-l10n-id="zen-settings-spaces-sync-footer">
+             <html:a id="zenSpacesOpenSyncSettings" class="text-link" data-l10n-name="sync-link" href="#"/>
+@@ -60,6 +63,17 @@
              hidden="true"/>
        <checkbox data-l10n-id="zen-tabs-select-recently-used-on-close"
              preference="zen.tabs.select-recently-used-on-close"/>

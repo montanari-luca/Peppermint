@@ -164,6 +164,14 @@ const FEATURES = [
 
   // delayed
   {
+    name: "Isolated spaces",
+    phase: DELAYED,
+    run: win =>
+      load(
+        "moz-src:///peppermint/isolated-spaces/PeppermintIsolatedSpacesWindow.sys.mjs"
+      ).PeppermintIsolatedSpacesWindow.initWindow(win),
+  },
+  {
     name: "Peppermint actions",
     phase: DELAYED,
     run: () =>
@@ -297,6 +305,15 @@ const FEATURES = [
   },
 
   // idle
+  // Containers of spaces deleted on another device or in another window.
+  {
+    name: "Isolated spaces cleanup",
+    phase: IDLE,
+    run: win =>
+      load(
+        "moz-src:///peppermint/isolated-spaces/PeppermintIsolatedSpacesWindow.sys.mjs"
+      ).PeppermintIsolatedSpacesWindow.prune(win),
+  },
   {
     name: "Live folders idle",
     phase: IDLE,

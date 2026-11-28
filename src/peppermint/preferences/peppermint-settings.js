@@ -852,7 +852,7 @@ Preferences.addAll([
   {
     id: "zen.workspaces.force-container-workspace",
     type: "bool",
-    default: true,
+    default: false,
   },
   {
     id: "zen.workspaces.open-new-tab-if-last-unpinned-tab-is-closed",
@@ -877,7 +877,12 @@ Preferences.addAll([
   {
     id: "zen.workspaces.separate-essentials",
     type: "bool",
-    default: false,
+    default: true,
+  },
+  {
+    id: "peppermint.spaces.isolate-new",
+    type: "bool",
+    default: true,
   },
   {
     id: "zen.tabs.show-newtab-vertical",

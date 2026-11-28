@@ -1,6 +1,20 @@
 --- a/browser/components/tabbrowser/Tabbrowser.sys.mjs
 +++ b/browser/components/tabbrowser/Tabbrowser.sys.mjs
-@@ -7980,7 +7980,11 @@
+@@ -4058,11 +4058,11 @@
+ 
+     let hasZenDefaultUserContextId = false;
+     let zenForcedWorkspaceId = undefined;
+-    if (beforeRouteResult.isRouteFound && this.documentGlobal.gZenSpaceRoutingManager.shouldUseRouteContainer(userContextId, fromExternal, this.documentGlobal)) {
++    if (beforeRouteResult.isRouteFound && this.documentGlobal.gZenSpaceRoutingManager.shouldUseRouteContainer(userContextId, fromExternal, this.documentGlobal, beforeRouteResult)) {
+       userContextId = beforeRouteResult.userContextId;
+       hasZenDefaultUserContextId = true;
+     } else if (typeof this.documentGlobal.gZenWorkspaces !== "undefined" && !_forZenEmptyTab) {
+-      [userContextId, hasZenDefaultUserContextId, zenForcedWorkspaceId] = this.documentGlobal.gZenWorkspaces.getContextIdIfNeeded(userContextId, fromExternal, triggeringPrincipal);
++      [userContextId, hasZenDefaultUserContextId, zenForcedWorkspaceId] = this.documentGlobal.gZenWorkspaces.getContextIdIfNeeded(userContextId, fromExternal, triggeringPrincipal, zenWorkspaceId);
+     }
+ 
+     if (!UserInteraction.running("browser.tabs.opening", this.documentGlobal)) {
+@@ -8216,7 +8216,11 @@
     * @param {boolean} [options.replaceLastTab=false]
     *   When true, opens a newtab to prevent the window from closing.
     */
@@ -13,7 +27,7 @@
      if (!this.isTab(aTab)) return; // TODO: Handle tab groups
      if (this.tabs.length == 1) {
        if (!replaceLastTab) {
-@@ -8775,9 +8779,6 @@
+@@ -9039,9 +9043,6 @@
        const tabId = aTab.id;
        const thisTab = this.documentGlobal.gZenWindowSync.getItemFromWindow(this.documentGlobal, tabId);
        if (thisTab) {
@@ -23,14 +37,14 @@
          // Just move the tab to the index
          this.moveTabTo(thisTab, { elementIndex, tabIndex });
          if (spaceId) {
-@@ -8841,10 +8842,6 @@
-       this.removeTab(newTab);
+@@ -9106,10 +9107,6 @@
        return null;
      }
--
+ 
 -    // The swap brings the other window's space over with the tab, so settle
 -    // it into one this window actually has.
 -    this.documentGlobal.gZenWorkspaces?.adoptTabIntoSpace(newTab, spaceId);
- 
+-
      if (selectTab) {
        this.selectedTab = newTab;
+     }

@@ -45,7 +45,9 @@ add_task(function test_generations() {
   }
   Assert.equal(newFeatures(GENERATION).length, 0, "Nothing is newer");
   Assert.ok(
-    newFeatures(GENERATION - 1).some(feature => feature.id == "startup-doctor"),
+    newFeatures(GENERATION - 1).some(
+      feature => feature.id == "isolated-spaces"
+    ),
     "The newest features are listed"
   );
   Assert.ok(

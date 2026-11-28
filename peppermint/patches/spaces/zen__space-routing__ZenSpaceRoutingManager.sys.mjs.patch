@@ -1,0 +1,37 @@
+--- a/zen/space-routing/ZenSpaceRoutingManager.sys.mjs
++++ b/zen/space-routing/ZenSpaceRoutingManager.sys.mjs
+@@ -7,6 +7,8 @@
+ const lazy = {};
+ 
+ ChromeUtils.defineESModuleGetters(lazy, {
++  PeppermintIsolatedSpaces:
++    "moz-src:///peppermint/isolated-spaces/PeppermintIsolatedSpaces.sys.mjs",
+   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
+   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
+   ZenLittleWindow:
+@@ -504,13 +506,24 @@
+    * @param {number|undefined} userContextId - The container the tab would inherit
+    * @param {boolean} fromExternal - True when the link came from outside the browser
+    * @param {Window} win - The window the tab is being added to
++   * @param {object} [beforeResult] - The result of onBeforeAddTab
+    * @returns {boolean} True when the route's container should be applied
+    */
+-  shouldUseRouteContainer(userContextId, fromExternal, win) {
++  shouldUseRouteContainer(userContextId, fromExternal, win, beforeResult) {
+     if (typeof userContextId === "undefined" || fromExternal) {
+       return true;
+     }
+ 
++    // A tab routed into an isolated space always takes its container.
++    if (
++      beforeResult?.isRouteFound &&
++      lazy.PeppermintIsolatedSpaces.isIsolated(
++        win?.gZenWorkspaces?.getWorkspaceFromId(beforeResult.targetRoute)
++      )
++    ) {
++      return true;
++    }
++
+     const workspaces = win?.gZenWorkspaces;
+     if (!workspaces?.workspaceEnabled) {
+       return false;

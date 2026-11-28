@@ -14,6 +14,7 @@ BROWSER_CHROME_MANIFESTS += [
     "folder_icon/browser.toml",
     "ghost_mode/browser.toml",
     "homepage/browser.toml",
+    "isolated_spaces/browser.toml",
     "janitor/browser.toml",
     "library/browser.toml",
     "lookalike/browser.toml",
